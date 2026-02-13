@@ -21,7 +21,7 @@ internal sealed class SenderFacade(ISender sender, ILogger<SenderFacade> logger)
 
     public async ValueTask<Result> SendAsync(Abstractions.ICommand request, CancellationToken cancellationToken = default)
     {
-        return await BaseSendAsync<Result, Result>(request, cancellationToken);
+        return await BaseSendAsync(request, cancellationToken);
     }
 
     public async ValueTask<Result<TResponse>> SendAsync<TResponse>(Abstractions.IQuery<TResponse> request, CancellationToken cancellationToken = default)
@@ -42,12 +42,45 @@ internal sealed class SenderFacade(ISender sender, ILogger<SenderFacade> logger)
         catch (Exception ex)
         {
             logger.LogError(ex, "Exception thrown while handling {1}: {2}", request.ToString(), ex.Message);
-            return (TResult)Result.Error("Unexpected error occurred");
+
+            result = (TResult)Result.Error("Unexpected error occurred.");
+
+            return result;
         }
 
         if (result.IsOk() || result.IsNoContent() || result.IsCreated())
         {
-            logger.LogInformation("Handled {1}: Result status: {2}, Result type: {3}", request.ToString(), result.Status, result.GetValue()?.ToString());
+            logger.LogInformation("Handled {1}: Result status: {2}, Result value type: {3}", request.ToString(), result.Status, result.GetValue()?.ToString());
+        }
+        else
+        {
+            logger.LogInformation("Handled {1}: Result status: {2}, Errors: {3}", request.ToString(), result.Status, result.MergedErrors());
+        }
+
+        return result;
+    }
+
+    private async ValueTask<Result> BaseSendAsync(IRequest<Result> request, CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("Handling {1}", request.ToString());
+
+        Result result;
+        try
+        {
+            result = await sender.Send(request, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Exception thrown while handling {1}: {2}", request.ToString(), ex.Message);
+
+            result = Result.Error("Unexpected error occurred.");
+
+            return result;
+        }
+
+        if (result.IsOk() || result.IsNoContent() || result.IsCreated())
+        {
+            logger.LogInformation("Handled {1}: Result status: {2}", request.ToString(), result.Status);
         }
         else
         {
