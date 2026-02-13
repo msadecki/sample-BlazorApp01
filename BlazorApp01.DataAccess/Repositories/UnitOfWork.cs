@@ -19,21 +19,15 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     int SaveChanges();
 }
 
-internal class UnitOfWork : IUnitOfWork
+internal class UnitOfWork(IDbContextFactory<AppDbContext> contextFactory) : IUnitOfWork
 {
-    private readonly AppDbContext _context;
-    private readonly Dictionary<Type, object> _repositories;
+    private readonly AppDbContext _context = contextFactory.CreateDbContext();
+    private readonly Dictionary<Type, object> _repositories = new Dictionary<Type, object>();
     private bool _disposed;
 
     private IRepository<CustomTask>? _customTasksRepository;
 
     private IRepository<ApplicationUser>? _applicationUsersRepository;
-
-    public UnitOfWork(IDbContextFactory<AppDbContext> contextFactory)
-    {
-        _context = contextFactory.CreateDbContext();
-        _repositories = new Dictionary<Type, object>();
-    }
 
     public IRepository<CustomTask> CustomTasksRepository
     {

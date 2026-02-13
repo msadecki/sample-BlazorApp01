@@ -1,5 +1,6 @@
 ﻿using BlazorApp01.Features.CQRS.Behaviors;
 using BlazorApp01.Features.CQRS.MediatorFacade;
+using BlazorApp01.Features.Services.EventStore;
 using FluentValidation;
 using Mediator;
 using Microsoft.Extensions.Configuration;
@@ -13,6 +14,7 @@ public static class FeaturesRegistration
     {
         AddValidation(services);
         AddMediator(services);
+        AddEventSourcing(services);
 
         return services;
     }
@@ -45,5 +47,16 @@ public static class FeaturesRegistration
         });
 
         services.AddScoped<ISenderFacade, SenderFacade>();
+    }
+
+    private static void AddEventSourcing(IServiceCollection services)
+    {
+        // Register JSON serializer options provider as singleton for performance
+        services.AddSingleton<IJsonSerializerOptionsProvider, JsonSerializerOptionsProvider>();
+        
+        // Register event sourcing services
+        services.AddScoped<IEventStoreService, EventStoreService>();
+        services.AddScoped<IOutboxService, OutboxService>();
+        services.AddScoped<IEventPublisher, EventPublisher>();
     }
 }

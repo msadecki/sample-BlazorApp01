@@ -1,6 +1,7 @@
 ﻿using BlazorApp01.BackgroundProcessing;
 using BlazorApp01.DataAccess;
 using BlazorApp01.Features;
+using BlazorApp01.Messaging;
 using BlazorApp01.Web;
 using BlazorApp01.Web.Components;
 using BlazorApp01.Web.Components.Account;
@@ -11,9 +12,9 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.RegisterDataAccess(builder.Configuration);
 builder.Services.RegisterFeatures(builder.Configuration);
+builder.Services.RegisterMessaging(builder.Configuration);
 builder.Services.RegisterBackgroundProcessing(builder.Configuration);
 builder.Services.RegisterWeb(builder.Configuration);
 

@@ -27,16 +27,10 @@ public interface IRepository<TEntity> where TEntity : class, IEntity
     void RemoveRange(IEnumerable<TEntity> entities);
 }
 
-internal class Repository<TEntity> : IRepository<TEntity> where TEntity : class, IEntity
+internal class Repository<TEntity>(AppDbContext context) : IRepository<TEntity> where TEntity : class, IEntity
 {
-    protected readonly AppDbContext Context;
-    protected readonly DbSet<TEntity> DbSet;
-
-    public Repository(AppDbContext context)
-    {
-        Context = context;
-        DbSet = context.Set<TEntity>();
-    }
+    protected readonly AppDbContext Context = context;
+    protected readonly DbSet<TEntity> DbSet = context.Set<TEntity>();
 
     public virtual IQueryable<TEntity> QueryAsNoTracking()
     {

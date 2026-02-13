@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
-using BlazorApp01.Domain.Models;
+﻿using BlazorApp01.Domain.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace BlazorApp01.Web.Components.Account;
 

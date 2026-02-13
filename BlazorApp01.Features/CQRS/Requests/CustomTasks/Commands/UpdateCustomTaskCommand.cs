@@ -17,18 +17,11 @@ public sealed record UpdateCustomTaskCommand(
     byte[] RowVersion
 ) : ICommand<bool>;
 
-internal sealed class UpdateCustomTaskCommandHandler : ICommandHandler<UpdateCustomTaskCommand, bool>
+internal sealed class UpdateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : ICommandHandler<UpdateCustomTaskCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public UpdateCustomTaskCommandHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async ValueTask<Result<bool>> Handle(UpdateCustomTaskCommand command, CancellationToken cancellationToken)
     {
-        var customTask = await _unitOfWork.CustomTasksRepository
+        var customTask = await unitOfWork.CustomTasksRepository
             .Query()
             .FirstOrDefaultAsync(x => x.CustomTaskId == command.CustomTaskId, cancellationToken);
 
@@ -45,8 +38,8 @@ internal sealed class UpdateCustomTaskCommandHandler : ICommandHandler<UpdateCus
         customTask.IsActive = command.IsActive;
         customTask.RowVersion = command.RowVersion;
 
-        _unitOfWork.CustomTasksRepository.Update(customTask);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        unitOfWork.CustomTasksRepository.Update(customTask);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;
     }

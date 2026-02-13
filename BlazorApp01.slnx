@@ -6,6 +6,7 @@
   <Project Path="BlazorApp01.DataAccess/BlazorApp01.DataAccess.csproj" />
   <Project Path="BlazorApp01.Domain/BlazorApp01.Domain.csproj" />
   <Project Path="BlazorApp01.Features/BlazorApp01.Features.csproj" Id="88577bbb-18c5-47bb-a670-5043c71fb2fe" />
+  <Project Path="BlazorApp01.Messaging/BlazorApp01.Messaging.csproj" />
   <Project Path="BlazorApp01.UnitTests/BlazorApp01.UnitTests.csproj" Id="153a9bfe-b822-451e-aff8-b6be5db06941" />
   <Project Path="BlazorApp01.Web/BlazorApp01.Web.csproj" />
 </Solution>

@@ -20,18 +20,11 @@ public sealed record GetCustomTasksPagedResponse(
     int TotalCount
 );
 
-internal sealed class GetCustomTasksPagedQueryHandler : IQueryHandler<GetCustomTasksPagedQuery, GetCustomTasksPagedResponse>
+internal sealed class GetCustomTasksPagedQueryHandler(IUnitOfWork unitOfWork) : IQueryHandler<GetCustomTasksPagedQuery, GetCustomTasksPagedResponse>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public GetCustomTasksPagedQueryHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async ValueTask<Result<GetCustomTasksPagedResponse>> Handle(GetCustomTasksPagedQuery query, CancellationToken cancellationToken)
     {
-        var dbQuery = _unitOfWork.CustomTasksRepository.QueryAsNoTracking();
+        var dbQuery = unitOfWork.CustomTasksRepository.QueryAsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(query.DescriptionFilter))
         {

@@ -7,18 +7,11 @@ namespace BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands;
 
 public sealed record DeleteCustomTaskCommand(int CustomTaskId) : ICommand<bool>;
 
-internal sealed class DeleteCustomTaskCommandHandler : ICommandHandler<DeleteCustomTaskCommand, bool>
+internal sealed class DeleteCustomTaskCommandHandler(IUnitOfWork unitOfWork) : ICommandHandler<DeleteCustomTaskCommand, bool>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public DeleteCustomTaskCommandHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async ValueTask<Result<bool>> Handle(DeleteCustomTaskCommand command, CancellationToken cancellationToken)
     {
-        var customTask = await _unitOfWork.CustomTasksRepository
+        var customTask = await unitOfWork.CustomTasksRepository
             .Query()
             .FirstOrDefaultAsync(x => x.CustomTaskId == command.CustomTaskId, cancellationToken);
 
@@ -27,8 +20,8 @@ internal sealed class DeleteCustomTaskCommandHandler : ICommandHandler<DeleteCus
             return false;
         }
 
-        _unitOfWork.CustomTasksRepository.Remove(customTask);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        unitOfWork.CustomTasksRepository.Remove(customTask);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;
     }

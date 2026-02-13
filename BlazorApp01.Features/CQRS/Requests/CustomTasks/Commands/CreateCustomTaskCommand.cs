@@ -1,8 +1,10 @@
 using Ardalis.Result;
 using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Domain.Enums;
+using BlazorApp01.Domain.Events.CustomTasks;
 using BlazorApp01.Domain.Models;
 using BlazorApp01.Features.CQRS.MediatorFacade.Abstractions;
+using BlazorApp01.Features.Services.EventStore;
 using FluentValidation;
 
 namespace BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands;
@@ -16,7 +18,10 @@ public sealed record CreateCustomTaskCommand(
     bool IsActive
 ) : ICommand<int>;
 
-internal sealed class CreateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : ICommandHandler<CreateCustomTaskCommand, int>
+internal sealed class CreateCustomTaskCommandHandler(
+    IUnitOfWork unitOfWork,
+    IEventStoreService eventStoreService,
+    IEventPublisher eventPublisher) : ICommandHandler<CreateCustomTaskCommand, int>
 {
     public async ValueTask<Result<int>> Handle(CreateCustomTaskCommand command, CancellationToken cancellationToken)
     {
@@ -31,6 +36,31 @@ internal sealed class CreateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
         };
 
         await unitOfWork.CustomTasksRepository.AddAsync(customTask, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Create domain event
+        var domainEvent = new CustomTaskCreatedEvent
+        {
+            CustomTaskId = customTask.CustomTaskId,
+            Description = customTask.Description,
+            Status = customTask.Status,
+            CreatedAt = customTask.CreatedAt,
+            DueDate = customTask.DueDate,
+            CompletionDate = customTask.CompletionDate,
+            IsActive = customTask.IsActive
+        };
+
+        // Store event in event store
+        await eventStoreService.AppendEventAsync(
+            domainEvent,
+            aggregateType: nameof(CustomTask),
+            aggregateId: customTask.CustomTaskId.ToString(),
+            version: 1,
+            cancellationToken);
+
+        // Add to outbox for publishing
+        await eventPublisher.PublishAsync(domainEvent, cancellationToken);
+
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return customTask.CustomTaskId;

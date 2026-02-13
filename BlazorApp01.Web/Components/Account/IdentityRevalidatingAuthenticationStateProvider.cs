@@ -1,9 +1,9 @@
-﻿using BlazorApp01.Domain.Models;
+﻿using System.Security.Claims;
+using BlazorApp01.Domain.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using System.Security.Claims;
 
 namespace BlazorApp01.Web.Components.Account;
 

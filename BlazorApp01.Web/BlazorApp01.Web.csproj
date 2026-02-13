@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BlazorApp01.BackgroundProcessing\BlazorApp01.BackgroundProcessing.csproj" />
     <ProjectReference Include="..\BlazorApp01.Features\BlazorApp01.Features.csproj" />
+    <ProjectReference Include="..\BlazorApp01.Messaging\BlazorApp01.Messaging.csproj" />
   </ItemGroup>
 
 </Project>

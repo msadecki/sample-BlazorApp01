@@ -8,24 +8,17 @@ namespace BlazorApp01.Features.CQRS.Behaviors;
 /// Pipeline behavior that validates requests using FluentValidation before they reach handlers.
 /// Returns validation errors as Result.Invalid() to maintain consistency with Ardalis.Result pattern.
 /// </summary>
-internal sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+internal sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators) : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
     where TResponse : IResult
 {
-    private readonly IEnumerable<IValidator<TRequest>> _validators;
-
-    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
-    {
-        _validators = validators;
-    }
-
     public async ValueTask<TResponse> Handle(
         TRequest request,
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
         // If no validators registered for this request type, skip validation
-        if (!_validators.Any())
+        if (!validators.Any())
         {
             return await next(request, cancellationToken);
         }
@@ -33,7 +26,7 @@ internal sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavio
         // Run all validators
         var context = new ValidationContext<TRequest>(request);
         var validationResults = await Task.WhenAll(
-            _validators.Select(v => v.ValidateAsync(context, cancellationToken)));
+            validators.Select(v => v.ValidateAsync(context, cancellationToken)));
 
         // Collect all validation failures
         var failures = validationResults

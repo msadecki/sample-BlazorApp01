@@ -23,6 +23,7 @@ public static class BackgroundProcessingRegistration
         services.AddHangfireServer();
 
         services.AddScoped<AddRandomCustomTaskJob>();
+        services.AddScoped<OutboxProcessorJob>();
     }
 
     public static void AddCronJobs(this IServiceProvider services)
@@ -36,6 +37,13 @@ public static class BackgroundProcessingRegistration
             $"RecurringJob-{nameof(AddRandomCustomTaskJob)}",
             job => job.ExecuteAsync(),
             configuration.GetSection("CronJobs:AddRandomCustomTaskJob")?.Value ?? "*/5 * * * *"
+        );
+
+        // Process outbox messages every minute
+        recurringJobManager.AddOrUpdate<OutboxProcessorJob>(
+            $"RecurringJob-{nameof(OutboxProcessorJob)}",
+            job => job.ExecuteAsync(),
+            configuration.GetSection("CronJobs:OutboxProcessorJob")?.Value ?? "*/1 * * * *"
         );
     }
 }
