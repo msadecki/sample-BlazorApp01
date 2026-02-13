@@ -1,6 +1,16 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution Items/AI-prompts/">
+    <File Path="AI-prompts/01-Solution-cleanup.md" />
+    <File Path="AI-prompts/02-Event-sourcing.md" />
+    <File Path="AI-prompts/03-Solution-graph.md" />
+    <File Path="AI-prompts/04-Dark-theme.md" />
+    <File Path="AI-prompts/05-Refactor-to-CQRS.md" />
+    <File Path="AI-prompts/06-Paging-arrows.md" />
+    <File Path="AI-prompts/07-Architecture-review.md" />
   </Folder>
   <Project Path="BlazorApp01.BackgroundProcessing/BlazorApp01.BackgroundProcessing.csproj" Id="1cf05601-3fa9-4130-8c0d-83784e505cd4" />
   <Project Path="BlazorApp01.DataAccess/BlazorApp01.DataAccess.csproj" />

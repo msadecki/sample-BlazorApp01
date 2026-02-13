@@ -34,3 +34,28 @@ Explanation:
 - Add-Migration AddSomeTable → Creates a migration named AddSomeTable.
 - -Project BlazorApp01.DataAccess → The project where your DbContext and migrations live.
 - -StartupProject BlazorApp01.Web → The project that provides configuration and services.
+
+## Steps in Docker Desktop Terminal
+
+### Run RabbitMQ with management UI
+```
+docker run -d -p 5672:5672 -p 15672:15672 rabbitmq:management
+```
+or with a name for easier reference:
+```
+docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management
+```
+
+# Blazor Identity scaffolding has completed successfully.
+
+## For setup and configuration information, see https://go.microsoft.com/fwlink/?linkid=2290075.
+
+If the project had identity support prior to scaffolding, ensure that the following changes are present in Program.cs:
+1. Correct DbContextClass is used in the following statements :
+    - var connectionString = builder.Configuration.GetConnectionString(DBCONTEXT_CONNECTIONSTRING) ...
+    - builder.Services.AddDbContext<DBCONTEXT>(options => ...
+    - builder.Services.AddIdentityCore<IDENTITY_USER_CLASS>...
+        .AddEntityFrameworkStores<DBCONTEXT>() ...
+2. Correct Identity User class is being used, (if using the default 'IdentityUser' or a custom IdentityUser class).
+    - builder.Services.AddIdentityCore<IDENTITY_USER_CLASS>...
+    - builder.Services.AddSingleton<IEmailSender<IDENTITY_USER_CLASS>...
