@@ -1,0 +1,58 @@
+﻿@page "/customtasks/details"
+@using Microsoft.EntityFrameworkCore
+@using BlazorApp01.Domain.Models
+@inject IDbContextFactory<BlazorApp01.DataAccess.Contexts.AppDbContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>CustomTask</h2>
+    <hr />
+    @if (customtask is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+            <dt class="col-sm-2">Description</dt>
+            <dd class="col-sm-10">@customtask.Description</dd>
+            <dt class="col-sm-2">Status</dt>
+            <dd class="col-sm-10">@customtask.Status</dd>
+            <dt class="col-sm-2">CreatedAt</dt>
+            <dd class="col-sm-10">@customtask.CreatedAt</dd>
+            <dt class="col-sm-2">DueDate</dt>
+            <dd class="col-sm-10">@customtask.DueDate</dd>
+            <dt class="col-sm-2">CompletionDate</dt>
+            <dd class="col-sm-10">@customtask.CompletionDate</dd>
+            <dt class="col-sm-2">IsActive</dt>
+            <dd class="col-sm-10">@customtask.IsActive</dd>
+            <dt class="col-sm-2">RowVersion</dt>
+            <dd class="col-sm-10">@customtask.RowVersion</dd>
+        </dl>
+        <div>
+            <a href="@($"/customtasks/edit?customtaskid={customtask.CustomTaskId}")">Edit</a> |
+            <a href="@($"/customtasks")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private CustomTask? customtask;
+
+    [SupplyParameterFromQuery]
+    private int CustomTaskId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        customtask = await context.CustomTasks.FirstOrDefaultAsync(m => m.CustomTaskId == CustomTaskId);
+
+        if (customtask is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}

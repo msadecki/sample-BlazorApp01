@@ -1,0 +1,42 @@
+﻿@page "/customtasks"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using BlazorApp01.Domain.Models
+@using BlazorApp01.DataAccess.Contexts
+@implements IAsyncDisposable
+@inject IDbContextFactory<BlazorApp01.DataAccess.Contexts.AppDbContext> DbFactory
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="customtasks/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.CustomTasks">
+    <PropertyColumn Property="customtask => customtask.Description" />
+    <PropertyColumn Property="customtask => customtask.Status" />
+    <PropertyColumn Property="customtask => customtask.CreatedAt" />
+    <PropertyColumn Property="customtask => customtask.DueDate" />
+    <PropertyColumn Property="customtask => customtask.CompletionDate" />
+    <PropertyColumn Property="customtask => customtask.IsActive" />
+    <PropertyColumn Property="customtask => customtask.RowVersion" />
+
+    <TemplateColumn Context="customtask">
+        <a href="@($"customtasks/edit?customtaskid={customtask.CustomTaskId}")">Edit</a> |
+        <a href="@($"customtasks/details?customtaskid={customtask.CustomTaskId}")">Details</a> |
+        <a href="@($"customtasks/delete?customtaskid={customtask.CustomTaskId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private AppDbContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}
