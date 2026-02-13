@@ -1,19 +1,24 @@
 @page "/applicationusers/details"
+@rendermode InteractiveServer
 @using BlazorApp01.Domain.Models
-@using BlazorApp01.DataAccess.Repositories
-@inject IUnitOfWork UnitOfWork
-@inject NavigationManager NavigationManager
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.ApplicationUsers.Queries
+@inject ISenderFacade Sender
 
 <PageTitle>User Details</PageTitle>
 
 <h1>User Details</h1>
 
 <div>
-    <h2>ApplicationUser</h2>
+    <h4>ApplicationUser</h4>
     <hr />
-    @if (applicationUser is null)
+    @if (isLoading)
     {
         <p><em>Loading...</em></p>
+    }
+    else if (applicationUser == null)
+    {
+        <p class="alert alert-danger">User not found.</p>
     }
     else
     {
@@ -109,26 +114,29 @@
             <dt class="col-sm-3">Concurrency Stamp</dt>
             <dd class="col-sm-9"><small class="text-muted">@applicationUser.ConcurrencyStamp</small></dd>
         </dl>
-        <div>
-            <a href="/applicationusers">Back to List</a>
-        </div>
     }
+</div>
+<div>
+    <a href="/applicationusers">Back to List</a>
 </div>
 
 @code {
-    private ApplicationUser? applicationUser;
-
     [SupplyParameterFromQuery]
-    private string UserId { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+
+    private ApplicationUser? applicationUser;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        applicationUser = await UnitOfWork.Repository<ApplicationUser>().FirstOrDefaultAsync(
-            u => u.Id == UserId);
+        var query = new GetApplicationUserByIdQuery(UserId);
+        var result = await Sender.SendAsync(query);
 
-        if (applicationUser is null)
+        if (result.IsSuccess)
         {
-            NavigationManager.NotFound();
+            applicationUser = result.Value;
         }
+
+        isLoading = false;
     }
 }

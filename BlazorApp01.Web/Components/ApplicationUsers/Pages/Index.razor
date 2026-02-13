@@ -1,16 +1,18 @@
 @page "/applicationusers"
 @rendermode InteractiveServer
-@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using BlazorApp01.Domain.Models
-@using BlazorApp01.DataAccess.Repositories
-@inject IUnitOfWork UnitOfWork
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.ApplicationUsers.Queries
+@inject ISenderFacade Sender
 
 <PageTitle>Application Users</PageTitle>
 
 <h1>Application Users</h1>
 
-<input type="search" @bind="emailFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by email or username..." />
+<div class="mb-3">
+    <input type="search" @bind="emailFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by email or username..." class="form-control" />
+</div>
 
 <QuickGrid Class="table" ItemsProvider="applicationUsersProvider" Pagination="pagination">
     <PropertyColumn Property="user => user.UserName" Title="Username" Sortable="true" />
@@ -40,23 +42,32 @@
     {
         applicationUsersProvider = async request =>
         {
-            var query = UnitOfWork.Repository<ApplicationUser>().QueryAsNoTracking();
+            string? sortBy = null;
+            bool sortAscending = true;
 
-            if (!string.IsNullOrWhiteSpace(emailFilter))
+            if (request.GetSortByProperties().Any())
             {
-                query = query.Where(user => 
-                    (user.Email != null && user.Email.Contains(emailFilter)) || 
-                    (user.UserName != null && user.UserName.Contains(emailFilter)));
+                SortedProperty sortProperty = request.GetSortByProperties().First();
+                sortBy = sortProperty.PropertyName;
+                sortAscending = sortProperty.Direction == SortDirection.Ascending;
             }
 
-            var totalItemCount = await query.CountAsync(request.CancellationToken);
+            var query = new GetApplicationUsersPagedQuery(
+                SearchFilter: string.IsNullOrWhiteSpace(emailFilter) ? null : emailFilter,
+                StartIndex: request.StartIndex,
+                Count: request.Count ?? pagination.ItemsPerPage,
+                SortBy: sortBy,
+                SortAscending: sortAscending
+            );
 
-            var items = await request.ApplySorting(query)
-                                     .Skip(request.StartIndex)
-                                     .Take(request.Count ?? pagination.ItemsPerPage)
-                                     .ToListAsync(request.CancellationToken);
+            var result = await Sender.SendAsync(query, request.CancellationToken);
 
-            return GridItemsProviderResult.From(items, totalItemCount);
+            if (result.IsSuccess)
+            {
+                return GridItemsProviderResult.From(result.Value.Items, result.Value.TotalCount);
+            }
+
+            return GridItemsProviderResult.From(new List<ApplicationUser>(), 0);
         };
     }
 
