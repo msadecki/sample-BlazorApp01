@@ -137,7 +137,7 @@ else
             Description: customTask.Description,
             Status: customTask.Status,
             DueDate: customTask.DueDate,
-            CompletionDate: customTask.CompletionDate ?? DateTime.UtcNow,
+            CompletionDate: customTask.Status == CustomTaskStatus.Completed ? customTask.CompletionDate ?? DateTime.UtcNow : null,
             IsActive: customTask.IsActive,
             RowVersion: customTask.RowVersion
         );
