@@ -11,6 +11,6 @@ public abstract record DomainEventBase : IDomainEvent
 
     protected DomainEventBase()
     {
-        EventType = GetType().FullName ?? GetType().Name;
+        EventType = GetType().AssemblyQualifiedName!;
     }
 }

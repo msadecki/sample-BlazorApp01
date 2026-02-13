@@ -33,10 +33,11 @@ internal sealed class GetCustomTasksPagedQueryHandler(IUnitOfWork unitOfWork) : 
 
         var totalCount = await dbQuery.CountAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(query.SortBy))
-        {
-            dbQuery = ApplySorting(dbQuery, query.SortBy, query.SortAscending);
-        }
+        var sortBy = string.IsNullOrWhiteSpace(query.SortBy)
+            ? "CustomTaskId"
+            : query.SortBy;
+
+        dbQuery = ApplySorting(dbQuery, sortBy, query.SortAscending);
 
         var items = await dbQuery
             .Skip(query.StartIndex)

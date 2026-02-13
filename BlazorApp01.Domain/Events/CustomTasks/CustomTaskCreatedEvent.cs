@@ -13,6 +13,6 @@ public sealed record CustomTaskCreatedEvent : DomainEventBase
     public required CustomTaskStatus Status { get; init; }
     public required DateTime CreatedAt { get; init; }
     public required DateOnly DueDate { get; init; }
-    public required DateTime? CompletionDate { get; init; }
+    public DateTime? CompletionDate { get; init; }
     public required bool IsActive { get; init; }
 }
