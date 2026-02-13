@@ -54,9 +54,8 @@ else
                 </div>
                 <div class="form-group">
                     <label for="CreatedAt" class="control-label">Created At</label>
-                    <InputDate Type="InputDateType.DateTimeLocal" id="CreatedAt" @bind-Value="customTask.CreatedAt" class="form-control" />
-                    <ValidationMessage For="() => customTask.CreatedAt" class="text-danger" />
-                    <small class="form-text text-muted">Currently: @DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CreatedAt)</small>
+                    <input type="text" id="CreatedAt" class="form-control" value="@DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CreatedAt)" readonly disabled />
+                    <small class="form-text text-muted">This field cannot be modified</small>
                 </div>
                 <div class="form-group">
                     <label for="DueDate" class="control-label">Due Date</label>
@@ -136,7 +135,6 @@ else
             CustomTaskId: customTask.CustomTaskId,
             Description: customTask.Description,
             Status: customTask.Status,
-            CreatedAt: customTask.CreatedAt,
             DueDate: customTask.DueDate,
             CompletionDate: customTask.CompletionDate,
             IsActive: customTask.IsActive,

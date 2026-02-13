@@ -1,8 +1,11 @@
 using Ardalis.Result;
 using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Domain.Enums;
+using BlazorApp01.Domain.Events.CustomTasks;
 using BlazorApp01.Domain.Models;
 using BlazorApp01.Features.CQRS.MediatorFacade.Abstractions;
+using BlazorApp01.Features.Services.EventStore;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 namespace BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands;
@@ -11,14 +14,16 @@ public sealed record UpdateCustomTaskCommand(
     int CustomTaskId,
     string Description,
     CustomTaskStatus Status,
-    DateTime CreatedAt,
     DateOnly DueDate,
     DateTime? CompletionDate,
     bool IsActive,
     byte[] RowVersion
 ) : ICommand<bool>;
 
-internal sealed class UpdateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : ICommandHandler<UpdateCustomTaskCommand, bool>
+internal sealed class UpdateCustomTaskCommandHandler(
+    IUnitOfWork unitOfWork,
+    IEventStoreService eventStoreService,
+    IEventPublisher eventPublisher) : ICommandHandler<UpdateCustomTaskCommand, bool>
 {
     public async ValueTask<Result<bool>> Handle(UpdateCustomTaskCommand command, CancellationToken cancellationToken)
     {
@@ -28,12 +33,14 @@ internal sealed class UpdateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
 
         if (customTask == null)
         {
-            return false;
+            return Result<bool>.NotFound($"CustomTask with ID {command.CustomTaskId} not found.");
         }
 
+        var oldStatus = customTask.Status;
+
+        // Update entity
         customTask.Description = command.Description;
         customTask.Status = command.Status;
-        customTask.CreatedAt = command.CreatedAt;
         customTask.DueDate = command.DueDate;
         customTask.CompletionDate = command.CompletionDate;
         customTask.IsActive = command.IsActive;
@@ -42,6 +49,106 @@ internal sealed class UpdateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
         unitOfWork.Repository<CustomTask>().Update(customTask);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Raise CustomTaskStatusChangedEvent if status changed
+        if (oldStatus != command.Status)
+        {
+            var statusChangedEvent = new CustomTaskStatusChangedEvent
+            {
+                CustomTaskId = customTask.CustomTaskId,
+                OldStatus = oldStatus,
+                NewStatus = command.Status,
+                CompletionDate = command.CompletionDate
+            };
+
+            await eventStoreService.AppendEventAsync(
+                statusChangedEvent,
+                aggregateType: nameof(CustomTask),
+                aggregateId: customTask.CustomTaskId.ToString(),
+                version: 1,
+                cancellationToken);
+
+            await eventPublisher.PublishAsync(statusChangedEvent, cancellationToken);
+
+            // If status changed to Completed, also raise CustomTaskCompletedEvent
+            if (command.Status == CustomTaskStatus.Completed && command.CompletionDate.HasValue)
+            {
+                var completedEvent = new CustomTaskCompletedEvent
+                {
+                    CustomTaskId = customTask.CustomTaskId,
+                    CompletionDate = command.CompletionDate.Value,
+                    Description = customTask.Description
+                };
+
+                await eventStoreService.AppendEventAsync(
+                    completedEvent,
+                    aggregateType: nameof(CustomTask),
+                    aggregateId: customTask.CustomTaskId.ToString(),
+                    version: 1,
+                    cancellationToken);
+
+                await eventPublisher.PublishAsync(completedEvent, cancellationToken);
+            }
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
         return true;
+    }
+}
+
+internal sealed class UpdateCustomTaskCommandValidator : AbstractValidator<UpdateCustomTaskCommand>
+{
+    public UpdateCustomTaskCommandValidator()
+    {
+        RuleFor(x => x.CustomTaskId)
+            .GreaterThan(0)
+            .WithMessage("CustomTaskId must be greater than 0");
+
+        RuleFor(x => x.Description)
+            .NotEmpty()
+            .WithMessage("Description is required")
+            .MaximumLength(500)
+            .WithMessage("Description cannot exceed 500 characters");
+
+        RuleFor(x => x.Status)
+            .IsInEnum()
+            .WithMessage("Invalid task status");
+
+        RuleFor(x => x.DueDate)
+            .NotEmpty()
+            .WithMessage("Due date is required");
+
+        RuleFor(x => x.CompletionDate)
+            .Must((command, completionDate) => BeValidCompletionDate(completionDate))
+            .WithMessage("Completion date cannot be in the future")
+            .When(x => x.CompletionDate.HasValue);
+
+        RuleFor(x => x.Status)
+            .Must((command, status) => BeConsistentWithCompletionDate(command))
+            .WithMessage("Completed tasks must have a completion date, and non-completed tasks cannot have one");
+
+        RuleFor(x => x.RowVersion)
+            .NotEmpty()
+            .WithMessage("RowVersion is required for optimistic concurrency");
+    }
+
+    private static bool BeValidCompletionDate(DateTime? completionDate)
+    {
+        if (!completionDate.HasValue)
+        {
+            return true;
+        }
+
+        return completionDate.Value <= DateTime.UtcNow;
+    }
+
+    private static bool BeConsistentWithCompletionDate(UpdateCustomTaskCommand command)
+    {
+        if (command.Status == CustomTaskStatus.Completed)
+        {
+            return command.CompletionDate.HasValue;
+        }
+
+        return !command.CompletionDate.HasValue;
     }
 }

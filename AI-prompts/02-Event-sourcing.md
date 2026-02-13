@@ -2140,3 +2140,26 @@ Navigation:
 The implementation follows the exact same CQRS pattern and coding standards used in your OutboxMessages and CustomTasks pages, fully adhering to your .editorconfig rules.
 
 --------
+Help me to create domain events like for CustomTaskCreatedEvent in proper places for CustomTaskCompletedEvent and CustomTaskStatusChangedEvent.
+I have consumers in BlazorApp01.Messaging.Consumers. I'd like to create instances of events like I have for CustomTaskCreatedEvent in CreateCustomTaskCommandHandler.
+I do not want to add CompleteCustomTaskCommand. Lets use UpdateCustomTaskCommand to raise CustomTaskCompletedEvent
+--------
+I'll help you find where to raise CustomTaskCompletedEvent and CustomTaskStatusChangedEvent instances, similar to how CustomTaskCreatedEvent is raised in CreateCustomTaskCommandHandler. Let me search for update and complete command handlers.
+Let me search for all command files in the CustomTasks folder:
+...
+Based on my search, it appears you only have CreateCustomTaskCommand and AddRandomCustomTaskCommand currently. You'll need to create Update and Complete command handlers where you can raise the CustomTaskStatusChangedEvent and CustomTaskCompletedEvent.
+Let me create these command handlers following your existing pattern:
+1. UpdateCustomTaskCommand (raises CustomTaskStatusChangedEvent)
+...
+Perfect! Let me create the UpdateCustomTaskCommand that will raise both CustomTaskStatusChangedEvent and CustomTaskCompletedEvent (when the status changes to Completed).
+...
+Key Features
+This UpdateCustomTaskCommand handler:
+1.	Raises CustomTaskStatusChangedEvent - When the status changes from one value to another
+2.	Raises CustomTaskCompletedEvent - When the status changes to Completed (lines 62-77)
+3.	Proper event versioning - Increments version for each event stored
+4.	Follows your existing pattern - Same structure as CreateCustomTaskCommand
+5.	Full validation - Ensures completed tasks have completion dates
+6.	Works with your existing consumers - Both CustomTaskStatusChangedEventConsumer and CustomTaskCompletedEventConsumer will process these events
+The handler intelligently raises both events when appropriate, so when a task is marked as completed, both the status change and completion events are published to your message consumers.
+--------
