@@ -95,24 +95,17 @@
         await pagination.SetCurrentPageIndexAsync(0);
     }
 
-    private sealed class StoredEventViewModel
+    private sealed class StoredEventViewModel(
+        StoredEvent evt,
+        IDateTimeHelper dateTimeHelper)
     {
-        private readonly StoredEvent _event;
-        private readonly IDateTimeHelper _dateTimeHelper;
-
-        public StoredEventViewModel(StoredEvent evt, IDateTimeHelper dateTimeHelper)
-        {
-            _event = evt;
-            _dateTimeHelper = dateTimeHelper;
-        }
-
-        public long StoredEventId => _event.StoredEventId;
-        public Guid EventId => _event.EventId;
-        public string EventType => _event.EventType;
-        public string AggregateType => _event.AggregateType;
-        public string AggregateId => _event.AggregateId;
-        public int Version => _event.Version;
-        public string OccurredAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_event.OccurredAt);
-        public string StoredAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_event.StoredAt);
+        public long StoredEventId => evt.StoredEventId;
+        public Guid EventId => evt.EventId;
+        public string EventType => evt.EventType;
+        public string AggregateType => evt.AggregateType;
+        public string AggregateId => evt.AggregateId;
+        public int Version => evt.Version;
+        public string OccurredAtUserTZ => dateTimeHelper.ConvertToFormattedUserDateTime(evt.OccurredAt);
+        public string StoredAtUserTZ => dateTimeHelper.ConvertToFormattedUserDateTime(evt.StoredAt);
     }
 }
