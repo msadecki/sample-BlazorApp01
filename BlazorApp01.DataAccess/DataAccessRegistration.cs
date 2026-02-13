@@ -14,7 +14,7 @@ public static class DataAccessRegistration
 
     public static IServiceCollection RegisterDataAccess(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddDbContextFactory<AppDbContext>(options =>
         {
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
             if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
@@ -33,7 +33,8 @@ public static class DataAccessRegistration
 
         try
         {
-            var context = serviceProvider.GetRequiredService<AppDbContext>();
+            var contextFactory = serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            using var context = contextFactory.CreateDbContext();
 
             // Check if the database provider is relational before applying migrations.
             // This prevents the "Relational-specific methods" exception during integration tests using In-Memory DB.
@@ -42,7 +43,7 @@ public static class DataAccessRegistration
                 context.Database.Migrate();
             }
 
-            SeedData.Initialize(serviceProvider);
+            SeedData.Initialize(context);
         }
         catch (Exception ex)
         {
@@ -53,10 +54,8 @@ public static class DataAccessRegistration
 
     private static class SeedData
     {
-        public static void Initialize(IServiceProvider serviceProvider)
+        public static void Initialize(AppDbContext context)
         {
-            using var context = new AppDbContext(serviceProvider.GetRequiredService<DbContextOptions<AppDbContext>>());
-
             // REMARKS: Add seeding logic here if needed.
             EnsureSeedCustomTasks(context);
         }
