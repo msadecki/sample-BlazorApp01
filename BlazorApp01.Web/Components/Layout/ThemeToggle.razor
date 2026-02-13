@@ -1,35 +1,47 @@
 ﻿@rendermode InteractiveServer
-@attribute [StreamRendering(true)]
 @using BlazorApp01.Web.Services
+@using Microsoft.AspNetCore.Components.Authorization
 @inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @implements IAsyncDisposable
 
-<div class="theme-toggle">
-    <button @onclick="ToggleTheme" class="btn btn-link theme-toggle-btn" title="@GetThemeTitle()">
-        @if (_currentTheme == "dark")
-        {
-            <span>🌙</span>
-        }
-        else if (_currentTheme == "light")
-        {
-            <span>☀️</span>
-        }
-        else
-        {
-            <span>🌓</span>
-        }
-    </button>
-</div>
+@if (_isAuthenticated)
+{
+    <div class="theme-toggle">
+        <button @onclick="ToggleTheme" class="btn btn-link theme-toggle-btn" title="@GetThemeTitle()">
+            @if (_currentTheme == "dark")
+            {
+                <span>🌙</span>
+            }
+            else if (_currentTheme == "light")
+            {
+                <span>☀️</span>
+            }
+            else
+            {
+                <span>🌓</span>
+            }
+        </button>
+    </div>
+}
 
 @code {
     private string _currentTheme = "auto";
     private bool _hasRendered = false;
+    private bool _isAuthenticated = false;
+    private bool _isDisposed = false;
     private IJSObjectReference? _themeModule;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && _isAuthenticated && !_isDisposed)
         {
             try
             {
@@ -42,32 +54,39 @@
                 _hasRendered = true;
                 StateHasChanged();
             }
-            catch
+            catch (Exception)
             {
-                // Silently handle if JS interop fails during static rendering
+                // Silently handle initialization errors
             }
         }
     }
 
     private async Task ToggleTheme()
     {
-        if (!_hasRendered || _themeModule is null)
+        if (!_hasRendered || _themeModule is null || _isDisposed)
         {
             return;
         }
 
-        _currentTheme = _currentTheme switch
+        try
         {
-            "light" => "dark",
-            "dark" => "auto",
-            _ => "light"
-        };
+            _currentTheme = _currentTheme switch
+            {
+                "light" => "dark",
+                "dark" => "auto",
+                _ => "light"
+            };
 
-        ThemeService.SetTheme(_currentTheme);
-        await _themeModule.InvokeVoidAsync("saveTheme", _currentTheme);
-        await _themeModule.InvokeVoidAsync("setTheme", _currentTheme);
-        
-        StateHasChanged();
+            ThemeService.SetTheme(_currentTheme);
+            await _themeModule.InvokeVoidAsync("saveTheme", _currentTheme);
+            await _themeModule.InvokeVoidAsync("setTheme", _currentTheme);
+            
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Silently handle toggle errors
+        }
     }
 
     private string GetThemeTitle()
@@ -82,9 +101,31 @@
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
+        if (_isDisposed)
+        {
+            return;
+        }
+        
+        _isDisposed = true;
+        
         if (_themeModule is not null)
         {
-            await _themeModule.DisposeAsync();
+            try
+            {
+                await _themeModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuit already disconnected, ignore
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed, ignore
+            }
+            catch
+            {
+                // Ignore all other disposal errors
+            }
         }
     }
 }
