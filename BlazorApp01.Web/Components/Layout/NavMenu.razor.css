@@ -34,6 +34,14 @@
     background-size: cover;
 }
 
+.bi-spider-web-brand {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-bug' viewBox='0 0 16 16'%3E%3Cpath d='M8 1a1 1 0 0 1 1 1v.5h1.5a.5.5 0 0 1 0 1h-.03c.132.176.254.365.364.568C11.29 4.598 11.5 5.28 11.5 6H13a.5.5 0 0 1 0 1h-1.5c0 .863-.222 1.67-.614 2.364l-.02.034 1.428 1.428a.5.5 0 0 1-.708.708l-1.5-1.5A5 5 0 0 1 8.5 11H8v2.5h1.5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1 0-1H6V11h-.5a5 5 0 0 1-1.086-.116l-1.5 1.5a.5.5 0 0 1-.708-.708l1.428-1.428-.02-.034A3.9 3.9 0 0 1 3 8H1.5a.5.5 0 0 1 0-1H3c0-.72.21-1.402.568-1.932.11-.203.232-.392.364-.568H3.5a.5.5 0 0 1 0-1H5V2a1 1 0 0 1 1-1zm2 4.5V6a2 2 0 0 1-2 2h-.5V5.5A1.5 1.5 0 0 1 8.5 4h1a1.5 1.5 0 0 1 .5.5zM7 5.5V8H6.5a2 2 0 0 1-2-2v-.5h1A1.5 1.5 0 0 1 7 5.5zM8 11a3.5 3.5 0 0 0 3.5-3.5V6H8.5A.5.5 0 0 0 8 6.5V11zm-3.5-3.5A3.5 3.5 0 0 0 8 11V6.5a.5.5 0 0 0-.5-.5H4.5z'/%3E%3C/svg%3E");
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-right: 0.5rem;
+    top: 0px;
+}
+
 .bi-house-door-fill-nav-menu {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-house-door-fill' viewBox='0 0 16 16'%3E%3Cpath d='M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z'/%3E%3C/svg%3E");
 }
