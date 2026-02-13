@@ -1,0 +1,127 @@
+@page "/outboxmessages"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using BlazorApp01.Domain.Enums
+@using BlazorApp01.Domain.Models.EventStore
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.OutboxMessages.Queries
+@using BlazorApp01.Web.Services
+@inject ISenderFacade Sender
+@inject IDateTimeHelper DateTimeHelper
+
+<PageTitle>Outbox Messages</PageTitle>
+
+<h1>Outbox Messages</h1>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <input type="search" @bind="eventTypeFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by event type..." class="form-control" />
+    </div>
+    <div class="col-md-6">
+        <select @bind="statusFilter" @bind:after="RefreshGridAsync" class="form-select">
+            <option value="">All Statuses</option>
+            <option value="@OutboxMessageStatus.Pending">Pending</option>
+            <option value="@OutboxMessageStatus.Processing">Processing</option>
+            <option value="@OutboxMessageStatus.Published">Published</option>
+            <option value="@OutboxMessageStatus.Failed">Failed</option>
+        </select>
+    </div>
+</div>
+
+<QuickGrid Class="table" ItemsProvider="outboxMessagesProvider" Pagination="pagination">
+    <PropertyColumn Property="message => message.OutboxMessageId" Title="ID" Sortable="true" />
+    <PropertyColumn Property="message => message.EventType" Sortable="true" />
+    <PropertyColumn Property="message => message.Status" Sortable="true" />
+    <PropertyColumn Property="message => message.CreatedAtUserTZ" Title="Created At" Sortable="true" />
+    <PropertyColumn Property="message => message.ProcessedAtUserTZ" Title="Processed At" Sortable="true" />
+    <PropertyColumn Property="message => message.PublishedAtUserTZ" Title="Published At" Sortable="true" />
+    <PropertyColumn Property="message => message.RetryCount" Title="Retries" Sortable="true" />
+
+    <TemplateColumn Context="message">
+        <a href="@($"outboxmessages/details?outboxmessageid={message.OutboxMessageId}")">Details</a>
+    </TemplateColumn>
+</QuickGrid>
+<Paginator State="pagination" />
+
+@code {
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+
+    private string eventTypeFilter = string.Empty;
+    private string statusFilter = string.Empty;
+
+    private GridItemsProvider<OutboxMessageViewModel>? outboxMessagesProvider;
+
+    protected override void OnInitialized()
+    {
+        outboxMessagesProvider = async request =>
+        {
+            string? sortBy = null;
+            bool sortAscending = true;
+
+            if (request.GetSortByProperties().Any())
+            {
+                SortedProperty sortProperty = request.GetSortByProperties().First();
+                sortBy = sortProperty.PropertyName switch
+                {
+                    nameof(OutboxMessageViewModel.CreatedAtUserTZ) => nameof(OutboxMessage.CreatedAt),
+                    nameof(OutboxMessageViewModel.ProcessedAtUserTZ) => nameof(OutboxMessage.ProcessedAt),
+                    nameof(OutboxMessageViewModel.PublishedAtUserTZ) => nameof(OutboxMessage.PublishedAt),
+                    _ => sortProperty.PropertyName
+                };
+                sortAscending = sortProperty.Direction == SortDirection.Ascending;
+            }
+
+            OutboxMessageStatus? status = null;
+            if (!string.IsNullOrWhiteSpace(statusFilter) && Enum.TryParse<OutboxMessageStatus>(statusFilter, out var parsedStatus))
+            {
+                status = parsedStatus;
+            }
+
+            var query = new GetOutboxMessagesPagedQuery(
+                EventTypeFilter: string.IsNullOrWhiteSpace(eventTypeFilter) ? null : eventTypeFilter,
+                StatusFilter: status,
+                StartIndex: request.StartIndex,
+                Count: request.Count ?? pagination.ItemsPerPage,
+                SortBy: sortBy,
+                SortAscending: sortAscending
+            );
+
+            var responseResult = await Sender.SendAsync(query, request.CancellationToken);
+
+            var response = responseResult.Value;
+
+            // Map to view models
+            var viewModels = response.Items
+                .Select(message => new OutboxMessageViewModel(message, DateTimeHelper))
+                .ToList();
+
+            return GridItemsProviderResult.From(viewModels, response.TotalCount);
+        };
+    }
+
+    private async Task RefreshGridAsync()
+    {
+        await pagination.SetCurrentPageIndexAsync(0);
+    }
+
+    private sealed class OutboxMessageViewModel
+    {
+        private readonly OutboxMessage _message;
+        private readonly IDateTimeHelper _dateTimeHelper;
+
+        public OutboxMessageViewModel(OutboxMessage message, IDateTimeHelper dateTimeHelper)
+        {
+            _message = message;
+            _dateTimeHelper = dateTimeHelper;
+        }
+
+        public long OutboxMessageId => _message.OutboxMessageId;
+        public Guid MessageId => _message.MessageId;
+        public string EventType => _message.EventType;
+        public string Status => _message.Status.ToString();
+        public int RetryCount => _message.RetryCount;
+        public string CreatedAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_message.CreatedAt);
+        public string ProcessedAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_message.ProcessedAt);
+        public string PublishedAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_message.PublishedAt);
+    }
+}

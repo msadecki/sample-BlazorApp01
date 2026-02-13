@@ -1,0 +1,118 @@
+@page "/storedevents"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using BlazorApp01.Domain.Models.EventStore
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.StoredEvents.Queries
+@using BlazorApp01.Web.Services
+@inject ISenderFacade Sender
+@inject IDateTimeHelper DateTimeHelper
+
+<PageTitle>Stored Events</PageTitle>
+
+<h1>Stored Events</h1>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="search" @bind="eventTypeFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by event type..." class="form-control" />
+    </div>
+    <div class="col-md-4">
+        <input type="search" @bind="aggregateTypeFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by aggregate type..." class="form-control" />
+    </div>
+    <div class="col-md-4">
+        <input type="search" @bind="aggregateIdFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by aggregate ID..." class="form-control" />
+    </div>
+</div>
+
+<QuickGrid Class="table" ItemsProvider="storedEventsProvider" Pagination="pagination">
+    <PropertyColumn Property="evt => evt.StoredEventId" Title="ID" Sortable="true" />
+    <PropertyColumn Property="evt => evt.EventType" Sortable="true" />
+    <PropertyColumn Property="evt => evt.AggregateType" Sortable="true" />
+    <PropertyColumn Property="evt => evt.AggregateId" Sortable="true" />
+    <PropertyColumn Property="evt => evt.Version" Sortable="true" />
+    <PropertyColumn Property="evt => evt.OccurredAtUserTZ" Title="Occurred At" Sortable="true" />
+    <PropertyColumn Property="evt => evt.StoredAtUserTZ" Title="Stored At" Sortable="true" />
+
+    <TemplateColumn Context="evt">
+        <a href="@($"storedevents/details?storedeventid={evt.StoredEventId}")">Details</a>
+    </TemplateColumn>
+</QuickGrid>
+<Paginator State="pagination" />
+
+@code {
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+
+    private string eventTypeFilter = string.Empty;
+    private string aggregateTypeFilter = string.Empty;
+    private string aggregateIdFilter = string.Empty;
+
+    private GridItemsProvider<StoredEventViewModel>? storedEventsProvider;
+
+    protected override void OnInitialized()
+    {
+        storedEventsProvider = async request =>
+        {
+            string? sortBy = null;
+            bool sortAscending = true;
+
+            if (request.GetSortByProperties().Any())
+            {
+                SortedProperty sortProperty = request.GetSortByProperties().First();
+                sortBy = sortProperty.PropertyName switch
+                {
+                    nameof(StoredEventViewModel.OccurredAtUserTZ) => nameof(StoredEvent.OccurredAt),
+                    nameof(StoredEventViewModel.StoredAtUserTZ) => nameof(StoredEvent.StoredAt),
+                    _ => sortProperty.PropertyName
+                };
+                sortAscending = sortProperty.Direction == SortDirection.Ascending;
+            }
+
+            var query = new GetStoredEventsPagedQuery(
+                EventTypeFilter: string.IsNullOrWhiteSpace(eventTypeFilter) ? null : eventTypeFilter,
+                AggregateTypeFilter: string.IsNullOrWhiteSpace(aggregateTypeFilter) ? null : aggregateTypeFilter,
+                AggregateIdFilter: string.IsNullOrWhiteSpace(aggregateIdFilter) ? null : aggregateIdFilter,
+                StartIndex: request.StartIndex,
+                Count: request.Count ?? pagination.ItemsPerPage,
+                SortBy: sortBy,
+                SortAscending: sortAscending
+            );
+
+            var responseResult = await Sender.SendAsync(query, request.CancellationToken);
+
+            var response = responseResult.Value;
+
+            // Map to view models
+            var viewModels = response.Items
+                .Select(evt => new StoredEventViewModel(evt, DateTimeHelper))
+                .ToList();
+
+            return GridItemsProviderResult.From(viewModels, response.TotalCount);
+        };
+    }
+
+    private async Task RefreshGridAsync()
+    {
+        await pagination.SetCurrentPageIndexAsync(0);
+    }
+
+    private sealed class StoredEventViewModel
+    {
+        private readonly StoredEvent _event;
+        private readonly IDateTimeHelper _dateTimeHelper;
+
+        public StoredEventViewModel(StoredEvent evt, IDateTimeHelper dateTimeHelper)
+        {
+            _event = evt;
+            _dateTimeHelper = dateTimeHelper;
+        }
+
+        public long StoredEventId => _event.StoredEventId;
+        public Guid EventId => _event.EventId;
+        public string EventType => _event.EventType;
+        public string AggregateType => _event.AggregateType;
+        public string AggregateId => _event.AggregateId;
+        public int Version => _event.Version;
+        public string OccurredAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_event.OccurredAt);
+        public string StoredAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_event.StoredAt);
+    }
+}

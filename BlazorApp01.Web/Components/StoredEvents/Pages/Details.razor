@@ -1,0 +1,104 @@
+@page "/storedevents/details"
+@rendermode InteractiveServer
+@using BlazorApp01.Domain.Models.EventStore
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.StoredEvents.Queries
+@using BlazorApp01.Web.Services
+@inject ISenderFacade Sender
+@inject IDateTimeHelper DateTimeHelper
+
+<PageTitle>Stored Event Details</PageTitle>
+
+<h1>Stored Event Details</h1>
+
+<div>
+    <h4>StoredEvent</h4>
+    <hr />
+    @if (isLoading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (storedEvent == null)
+    {
+        <p class="alert alert-danger">Stored event not found.</p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Stored Event ID</dt>
+            <dd class="col-sm-10">@storedEvent.StoredEventId</dd>
+
+            <dt class="col-sm-2">Event ID</dt>
+            <dd class="col-sm-10">@storedEvent.EventId</dd>
+
+            <dt class="col-sm-2">Event Type</dt>
+            <dd class="col-sm-10">
+                <span class="badge bg-primary">@storedEvent.EventType</span>
+            </dd>
+
+            <dt class="col-sm-2">Aggregate Type</dt>
+            <dd class="col-sm-10">
+                <span class="badge bg-info">@storedEvent.AggregateType</span>
+            </dd>
+
+            <dt class="col-sm-2">Aggregate ID</dt>
+            <dd class="col-sm-10">@storedEvent.AggregateId</dd>
+
+            <dt class="col-sm-2">Version</dt>
+            <dd class="col-sm-10">@storedEvent.Version</dd>
+
+            <dt class="col-sm-2">Occurred At (Your Time Zone)</dt>
+            <dd class="col-sm-10">@DateTimeHelper.ConvertToFormattedUserDateTime(storedEvent.OccurredAt)</dd>
+
+            <dt class="col-sm-2">Stored At (Your Time Zone)</dt>
+            <dd class="col-sm-10">@DateTimeHelper.ConvertToFormattedUserDateTime(storedEvent.StoredAt)</dd>
+
+            @if (!string.IsNullOrWhiteSpace(storedEvent.CorrelationId))
+            {
+                <dt class="col-sm-2">Correlation ID</dt>
+                <dd class="col-sm-10">@storedEvent.CorrelationId</dd>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(storedEvent.CausationId))
+            {
+                <dt class="col-sm-2">Causation ID</dt>
+                <dd class="col-sm-10">@storedEvent.CausationId</dd>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(storedEvent.UserId))
+            {
+                <dt class="col-sm-2">User ID</dt>
+                <dd class="col-sm-10">@storedEvent.UserId</dd>
+            }
+
+            <dt class="col-sm-2">Event Data</dt>
+            <dd class="col-sm-10">
+                <pre class="bg-light p-3 border rounded"><code>@storedEvent.EventData</code></pre>
+            </dd>
+        </dl>
+    }
+</div>
+<div>
+    <a href="/storedevents">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public long StoredEventId { get; set; }
+
+    private StoredEvent? storedEvent;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = new GetStoredEventByIdQuery(StoredEventId);
+        var result = await Sender.SendAsync(query);
+
+        if (result.IsSuccess)
+        {
+            storedEvent = result.Value;
+        }
+
+        isLoading = false;
+    }
+}

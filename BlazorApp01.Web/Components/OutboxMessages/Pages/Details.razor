@@ -1,0 +1,108 @@
+@page "/outboxmessages/details"
+@rendermode InteractiveServer
+@using BlazorApp01.Domain.Models.EventStore
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.OutboxMessages.Queries
+@using BlazorApp01.Web.Services
+@inject ISenderFacade Sender
+@inject IDateTimeHelper DateTimeHelper
+
+<PageTitle>Outbox Message Details</PageTitle>
+
+<h1>Outbox Message Details</h1>
+
+<div>
+    <h4>OutboxMessage</h4>
+    <hr />
+    @if (isLoading)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else if (outboxMessage == null)
+    {
+        <p class="alert alert-danger">Outbox message not found.</p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Outbox Message ID</dt>
+            <dd class="col-sm-10">@outboxMessage.OutboxMessageId</dd>
+
+            <dt class="col-sm-2">Message ID</dt>
+            <dd class="col-sm-10">@outboxMessage.MessageId</dd>
+
+            <dt class="col-sm-2">Event Type</dt>
+            <dd class="col-sm-10">@outboxMessage.EventType</dd>
+
+            <dt class="col-sm-2">Status</dt>
+            <dd class="col-sm-10">
+                <span class="badge bg-@GetStatusBadgeColor(outboxMessage.Status)">
+                    @outboxMessage.Status
+                </span>
+            </dd>
+
+            <dt class="col-sm-2">Created At (Your Time Zone)</dt>
+            <dd class="col-sm-10">@DateTimeHelper.ConvertToFormattedUserDateTime(outboxMessage.CreatedAt)</dd>
+
+            <dt class="col-sm-2">Processed At (Your Time Zone)</dt>
+            <dd class="col-sm-10">@(DateTimeHelper.ConvertToFormattedUserDateTime(outboxMessage.ProcessedAt) ?? "Not processed")</dd>
+
+            <dt class="col-sm-2">Published At (Your Time Zone)</dt>
+            <dd class="col-sm-10">@(DateTimeHelper.ConvertToFormattedUserDateTime(outboxMessage.PublishedAt) ?? "Not published")</dd>
+
+            <dt class="col-sm-2">Retry Count</dt>
+            <dd class="col-sm-10">@outboxMessage.RetryCount</dd>
+
+            @if (!string.IsNullOrWhiteSpace(outboxMessage.Error))
+            {
+                <dt class="col-sm-2">Error</dt>
+                <dd class="col-sm-10">
+                    <div class="alert alert-danger">
+                        @outboxMessage.Error
+                    </div>
+                </dd>
+            }
+
+            <dt class="col-sm-2">Event Data</dt>
+            <dd class="col-sm-10">
+                <pre class="bg-light p-3 border rounded"><code>@outboxMessage.EventData</code></pre>
+            </dd>
+        </dl>
+    }
+</div>
+<div>
+    <a href="/outboxmessages">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public long OutboxMessageId { get; set; }
+
+    private OutboxMessage? outboxMessage;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = new GetOutboxMessageByIdQuery(OutboxMessageId);
+        var result = await Sender.SendAsync(query);
+
+        if (result.IsSuccess)
+        {
+            outboxMessage = result.Value;
+        }
+
+        isLoading = false;
+    }
+
+    private static string GetStatusBadgeColor(BlazorApp01.Domain.Enums.OutboxMessageStatus status)
+    {
+        return status switch
+        {
+            BlazorApp01.Domain.Enums.OutboxMessageStatus.Pending => "secondary",
+            BlazorApp01.Domain.Enums.OutboxMessageStatus.Processing => "primary",
+            BlazorApp01.Domain.Enums.OutboxMessageStatus.Published => "success",
+            BlazorApp01.Domain.Enums.OutboxMessageStatus.Failed => "danger",
+            _ => "secondary"
+        };
+    }
+}
