@@ -10,6 +10,8 @@ builder.Services.AddRazorComponents()
 
 builder.Services.RegisterDataAccess(builder.Configuration);
 
+builder.Services.AddQuickGridEntityFrameworkAdapter();
+
 var app = builder.Build();
 
 app.Services.MigrateAndSeedDatabase();
