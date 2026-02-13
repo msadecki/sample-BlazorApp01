@@ -1,0 +1,67 @@
+@page "/applicationusers"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using BlazorApp01.Domain.Models
+@using BlazorApp01.DataAccess.Repositories
+@inject IUnitOfWork UnitOfWork
+
+<PageTitle>Application Users</PageTitle>
+
+<h1>Application Users</h1>
+
+<input type="search" @bind="emailFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by email or username..." />
+
+<QuickGrid Class="table" ItemsProvider="applicationUsersProvider" Pagination="pagination">
+    <PropertyColumn Property="user => user.UserName" Title="Username" Sortable="true" />
+    <PropertyColumn Property="user => user.Email" Title="Email" Sortable="true" />
+    <PropertyColumn Property="user => user.EmailConfirmed" Title="Email Confirmed" Sortable="true" />
+    <PropertyColumn Property="user => user.PhoneNumber" Title="Phone Number" Sortable="true" />
+    <PropertyColumn Property="user => user.PhoneNumberConfirmed" Title="Phone Confirmed" Sortable="true" />
+    <PropertyColumn Property="user => user.TwoFactorEnabled" Title="2FA Enabled" Sortable="true" />
+    <PropertyColumn Property="user => user.LockoutEnabled" Title="Lockout Enabled" Sortable="true" />
+    <PropertyColumn Property="user => user.LockoutEnd" Title="Lockout End" Sortable="true" />
+    <PropertyColumn Property="user => user.AccessFailedCount" Title="Failed Access" Sortable="true" />
+
+    <TemplateColumn Context="user" Title="Actions">
+        <a href="@($"applicationusers/details?userid={user.Id}")">Details</a>
+    </TemplateColumn>
+</QuickGrid>
+<Paginator State="pagination" />
+
+@code {
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+
+    private string emailFilter = string.Empty;
+
+    private GridItemsProvider<ApplicationUser>? applicationUsersProvider;
+
+    protected override void OnInitialized()
+    {
+        applicationUsersProvider = async request =>
+        {
+            var query = UnitOfWork.ApplicationUsersRepository.QueryAsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(emailFilter))
+            {
+                query = query.Where(user => 
+                    (user.Email != null && user.Email.Contains(emailFilter)) || 
+                    (user.UserName != null && user.UserName.Contains(emailFilter)));
+            }
+
+            var totalItemCount = await query.CountAsync(request.CancellationToken);
+
+            var items = await request.ApplySorting(query)
+                                     .Skip(request.StartIndex)
+                                     .Take(request.Count ?? pagination.ItemsPerPage)
+                                     .ToListAsync(request.CancellationToken);
+
+            return GridItemsProviderResult.From(items, totalItemCount);
+        };
+    }
+
+    private async Task RefreshGridAsync()
+    {
+        await pagination.SetCurrentPageIndexAsync(0);
+    }
+}

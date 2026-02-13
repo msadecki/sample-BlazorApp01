@@ -1,0 +1,134 @@
+@page "/applicationusers/details"
+@using BlazorApp01.Domain.Models
+@using BlazorApp01.DataAccess.Repositories
+@inject IUnitOfWork UnitOfWork
+@inject NavigationManager NavigationManager
+
+<PageTitle>User Details</PageTitle>
+
+<h1>User Details</h1>
+
+<div>
+    <h2>ApplicationUser</h2>
+    <hr />
+    @if (applicationUser is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <dl class="row">
+            <dt class="col-sm-3">User ID</dt>
+            <dd class="col-sm-9">@applicationUser.Id</dd>
+
+            <dt class="col-sm-3">Username</dt>
+            <dd class="col-sm-9">@applicationUser.UserName</dd>
+
+            <dt class="col-sm-3">Normalized Username</dt>
+            <dd class="col-sm-9">@applicationUser.NormalizedUserName</dd>
+
+            <dt class="col-sm-3">Email</dt>
+            <dd class="col-sm-9">@applicationUser.Email</dd>
+
+            <dt class="col-sm-3">Normalized Email</dt>
+            <dd class="col-sm-9">@applicationUser.NormalizedEmail</dd>
+
+            <dt class="col-sm-3">Email Confirmed</dt>
+            <dd class="col-sm-9">
+                @if (applicationUser.EmailConfirmed)
+                {
+                    <span class="badge bg-success">Yes</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning">No</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Phone Number</dt>
+            <dd class="col-sm-9">@(applicationUser.PhoneNumber ?? "N/A")</dd>
+
+            <dt class="col-sm-3">Phone Number Confirmed</dt>
+            <dd class="col-sm-9">
+                @if (applicationUser.PhoneNumberConfirmed)
+                {
+                    <span class="badge bg-success">Yes</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">No</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Two Factor Enabled</dt>
+            <dd class="col-sm-9">
+                @if (applicationUser.TwoFactorEnabled)
+                {
+                    <span class="badge bg-success">Enabled</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Disabled</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Lockout Enabled</dt>
+            <dd class="col-sm-9">
+                @if (applicationUser.LockoutEnabled)
+                {
+                    <span class="badge bg-warning">Enabled</span>
+                }
+                else
+                {
+                    <span class="badge bg-success">Disabled</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Lockout End</dt>
+            <dd class="col-sm-9">
+                @if (applicationUser.LockoutEnd.HasValue)
+                {
+                    <span class="badge bg-danger">@applicationUser.LockoutEnd.Value.LocalDateTime</span>
+                }
+                else
+                {
+                    <span class="text-muted">Not locked out</span>
+                }
+            </dd>
+
+            <dt class="col-sm-3">Access Failed Count</dt>
+            <dd class="col-sm-9">
+                <span class="badge bg-@(applicationUser.AccessFailedCount > 0 ? "warning" : "success")">
+                    @applicationUser.AccessFailedCount
+                </span>
+            </dd>
+
+            <dt class="col-sm-3">Security Stamp</dt>
+            <dd class="col-sm-9"><small class="text-muted">@applicationUser.SecurityStamp</small></dd>
+
+            <dt class="col-sm-3">Concurrency Stamp</dt>
+            <dd class="col-sm-9"><small class="text-muted">@applicationUser.ConcurrencyStamp</small></dd>
+        </dl>
+        <div>
+            <a href="/applicationusers">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private ApplicationUser? applicationUser;
+
+    [SupplyParameterFromQuery]
+    private string UserId { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        applicationUser = await UnitOfWork.ApplicationUsersRepository.FirstOrDefaultAsync(
+            u => u.Id == UserId);
+
+        if (applicationUser is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}

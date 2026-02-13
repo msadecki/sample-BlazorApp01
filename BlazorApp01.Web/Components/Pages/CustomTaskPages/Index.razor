@@ -10,30 +10,28 @@
 
 <h1>Index</h1>
 
-<input type="search" @bind="descriptionFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" />
+<input type="search" @bind="descriptionFilter" @bind:event="oninput" @bind:after="RefreshGridAsync" placeholder="Search by description..." />
 
 <p>
     <a href="customtasks/create">Create New</a>
 </p>
 
-<div>
-    <QuickGrid Class="table" ItemsProvider="customTasksProvider" Pagination="pagination">
-        <PropertyColumn Property="customtask => customtask.Description" Sortable="true" />
-        <PropertyColumn Property="customtask => customtask.Status" Sortable="true" />
-        <PropertyColumn Property="customtask => customtask.CreatedAt" Sortable="true" />
-        <PropertyColumn Property="customtask => customtask.DueDate" Sortable="true" />
-        <PropertyColumn Property="customtask => customtask.CompletionDate" Sortable="true" />
-        <PropertyColumn Property="customtask => customtask.IsActive" Sortable="true" />
-        <PropertyColumn Property="customtask => customtask.RowVersion" Sortable="true" />
+<QuickGrid Class="table" ItemsProvider="customTasksProvider" Pagination="pagination">
+    <PropertyColumn Property="customtask => customtask.Description" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.Status" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.CreatedAt" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.DueDate" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.CompletionDate" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.IsActive" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.RowVersion" Sortable="true" />
 
-        <TemplateColumn Context="customtask">
-            <a href="@($"customtasks/edit?customtaskid={customtask.CustomTaskId}")">Edit</a> |
-            <a href="@($"customtasks/details?customtaskid={customtask.CustomTaskId}")">Details</a> |
-            <a href="@($"customtasks/delete?customtaskid={customtask.CustomTaskId}")">Delete</a>
-        </TemplateColumn>
-    </QuickGrid>
-    <Paginator State="pagination" />
-</div>
+    <TemplateColumn Context="customtask">
+        <a href="@($"customtasks/edit?customtaskid={customtask.CustomTaskId}")">Edit</a> |
+        <a href="@($"customtasks/details?customtaskid={customtask.CustomTaskId}")">Details</a> |
+        <a href="@($"customtasks/delete?customtaskid={customtask.CustomTaskId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+<Paginator State="pagination" />
 
 @code {
     private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };

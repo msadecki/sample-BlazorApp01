@@ -58,3 +58,18 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* QuickGrid table styles */
+.table tr {
+    height: 3em;
+}
+
+.table tr > td {
+    vertical-align: middle;
+}
+
+/* Hide rows where all TDs are empty */
+.table tbody tr:empty,
+.table tbody tr:has(td):not(:has(td:not(:empty))) {
+    display: none;
+}
