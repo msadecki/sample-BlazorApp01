@@ -1,3 +1,9 @@
+Can we change the colors to get a dark theme similar to the one on the Hangfire dashboard?
+--------
+I can help you create a dark theme similar to Hangfire's dashboard. I'll add a comprehensive dark theme with CSS variables for easy customization and a color scheme that matches Hangfire's professional dark aesthetic.
+
+app.css
+```
 /* ========================================
    CSS Variables for Theme
    ======================================== */
@@ -412,3 +418,24 @@ nav[aria-label="pagination"] span {
     color: var(--text-muted);
     font-style: italic;
 }
+```
+Key Changes Made:
+1.	CSS Variables System: Added a complete set of CSS variables at the top for easy theme management
+2.	Dark Mode Support: Implemented @media (prefers-color-scheme: dark) with Hangfire-inspired colors:
+•	Dark backgrounds (#1a1a1a, #222222, #2d2d2d)
+•	Light text on dark (#e0e0e0, #b0b0b0)
+•	Bright blue accent (#4a9eff) similar to Hangfire
+•	Adjusted shadows for dark theme
+3.	Dynamic Color Application: Replaced all hardcoded colors with CSS variables throughout
+4.	Hangfire-Style Aesthetic:
+•	Professional dark gray backgrounds
+•	Subtle gradients and shadows
+•	Blue accent color that pops on dark
+•	Smooth transitions
+The theme will automatically switch based on the user's system preference. If you want to force dark mode always or add a manual toggle, let me know!
+--------
+I need some changes in new dark theme.
+For example:
+- Top of page (in main) has light backgroud and light gray text color.
+- I do not want to have bottom border in .top-row class.
+--------
