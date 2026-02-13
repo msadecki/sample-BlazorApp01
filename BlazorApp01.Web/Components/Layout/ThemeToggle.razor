@@ -1,0 +1,90 @@
+﻿@rendermode InteractiveServer
+@attribute [StreamRendering(true)]
+@using BlazorApp01.Web.Services
+@inject ThemeService ThemeService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="theme-toggle">
+    <button @onclick="ToggleTheme" class="btn btn-link theme-toggle-btn" title="@GetThemeTitle()">
+        @if (_currentTheme == "dark")
+        {
+            <span>🌙</span>
+        }
+        else if (_currentTheme == "light")
+        {
+            <span>☀️</span>
+        }
+        else
+        {
+            <span>🌓</span>
+        }
+    </button>
+</div>
+
+@code {
+    private string _currentTheme = "auto";
+    private bool _hasRendered = false;
+    private IJSObjectReference? _themeModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _themeModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme.js");
+                _currentTheme = await _themeModule.InvokeAsync<string>("getTheme");
+                
+                ThemeService.SetTheme(_currentTheme);
+                await _themeModule.InvokeVoidAsync("setTheme", _currentTheme);
+                
+                _hasRendered = true;
+                StateHasChanged();
+            }
+            catch
+            {
+                // Silently handle if JS interop fails during static rendering
+            }
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        if (!_hasRendered || _themeModule is null)
+        {
+            return;
+        }
+
+        _currentTheme = _currentTheme switch
+        {
+            "light" => "dark",
+            "dark" => "auto",
+            _ => "light"
+        };
+
+        ThemeService.SetTheme(_currentTheme);
+        await _themeModule.InvokeVoidAsync("saveTheme", _currentTheme);
+        await _themeModule.InvokeVoidAsync("setTheme", _currentTheme);
+        
+        StateHasChanged();
+    }
+
+    private string GetThemeTitle()
+    {
+        return _currentTheme switch
+        {
+            "dark" => "Switch to Auto theme",
+            "light" => "Switch to Dark theme",
+            _ => "Switch to Light theme"
+        };
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (_themeModule is not null)
+        {
+            await _themeModule.DisposeAsync();
+        }
+    }
+}

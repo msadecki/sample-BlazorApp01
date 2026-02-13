@@ -15,6 +15,7 @@ public static class WebRegistration
             .AddInteractiveServerComponents();
 
         services.AddScoped<IDateTimeHelper, DateTimeHelper>();
+        services.AddScoped<ThemeService>();
 
         services.AddQuickGridEntityFrameworkAdapter();
 
