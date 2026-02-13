@@ -1,4 +1,5 @@
 using BlazorApp01.Web.Components;
+using BlazorApp01.DataAccess;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.RegisterDataAccess(builder.Configuration);
+
 var app = builder.Build();
+
+app.Services.MigrateAndSeedDatabase();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
