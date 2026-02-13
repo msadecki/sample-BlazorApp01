@@ -25,7 +25,7 @@
     <PropertyColumn Property="user => user.LockoutEnd" Title="Lockout End" Sortable="true" />
     <PropertyColumn Property="user => user.AccessFailedCount" Title="Failed Access" Sortable="true" />
 
-    <TemplateColumn Context="user" Title="Actions">
+    <TemplateColumn Context="user">
         <a href="@($"applicationusers/details?userid={user.Id}")">Details</a>
     </TemplateColumn>
 </QuickGrid>
