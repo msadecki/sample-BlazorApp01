@@ -1,10 +1,10 @@
 ﻿@page "/customtasks"
 @rendermode InteractiveServer
-@using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using BlazorApp01.Domain.Models
-@using BlazorApp01.DataAccess.Repositories
-@inject IUnitOfWork UnitOfWork
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@inject ISenderFacade Sender
 
 <PageTitle>Index</PageTitle>
 
@@ -44,21 +44,29 @@
     {
         customTasksProvider = async request =>
         {
-            var query = UnitOfWork.CustomTasksRepository.QueryAsNoTracking();
+            string? sortBy = null;
+            bool sortAscending = true;
 
-            if (!string.IsNullOrWhiteSpace(descriptionFilter))
+            if (request.GetSortByProperties().Any())
             {
-                query = query.Where(customTask => customTask.Description.Contains(descriptionFilter));
+                var sortProperty = request.GetSortByProperties().First();
+                sortBy = sortProperty.PropertyName;
+                sortAscending = sortProperty.Direction == SortDirection.Ascending;
             }
 
-            var totalItemCount = await query.CountAsync(request.CancellationToken);
+            var query = new GetCustomTasksPagedQuery(
+                DescriptionFilter: string.IsNullOrWhiteSpace(descriptionFilter) ? null : descriptionFilter,
+                StartIndex: request.StartIndex,
+                Count: request.Count ?? pagination.ItemsPerPage,
+                SortBy: sortBy,
+                SortAscending: sortAscending
+            );
 
-            var items = await request.ApplySorting(query)
-                                     .Skip(request.StartIndex)
-                                     .Take(request.Count ?? pagination.ItemsPerPage)
-                                     .ToListAsync(request.CancellationToken);
+            var responseResult = await Sender.SendAsync(query, request.CancellationToken);
 
-            return GridItemsProviderResult.From(items, totalItemCount);
+            var response = responseResult.Value;
+
+            return GridItemsProviderResult.From(response.Items, response.TotalCount);
         };
     }
 
