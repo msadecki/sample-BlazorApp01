@@ -1,0 +1,99 @@
+using System.Linq.Expressions;
+using BlazorApp01.DataAccess.Contexts;
+using BlazorApp01.Domain.Abstractions;
+using Microsoft.EntityFrameworkCore;
+
+namespace BlazorApp01.DataAccess.Repositories;
+
+public interface IRepository<TEntity> where TEntity : class, IEntity
+{
+    Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default);
+    Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+    Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+    Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+    Task<int> CountAsync(Expression<Func<TEntity, bool>>? predicate = null, CancellationToken cancellationToken = default);
+
+    Task AddAsync(TEntity entity, CancellationToken cancellationToken = default);
+    Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
+
+    void Update(TEntity entity);
+    void UpdateRange(IEnumerable<TEntity> entities);
+
+    void Remove(TEntity entity);
+    void RemoveRange(IEnumerable<TEntity> entities);
+}
+
+internal class Repository<TEntity> : IRepository<TEntity> where TEntity : class, IEntity
+{
+    protected readonly AppDbContext Context;
+    protected readonly DbSet<TEntity> DbSet;
+
+    public Repository(AppDbContext context)
+    {
+        Context = context;
+        DbSet = context.Set<TEntity>();
+    }
+
+    public virtual async Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.FindAsync(new[] { id }, cancellationToken);
+    }
+
+    public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbSet.ToListAsync(cancellationToken);
+    }
+
+    public virtual async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.Where(predicate).ToListAsync(cancellationToken);
+    }
+
+    public virtual async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    public virtual async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.AnyAsync(predicate, cancellationToken);
+    }
+
+    public virtual async Task<int> CountAsync(Expression<Func<TEntity, bool>>? predicate = null, CancellationToken cancellationToken = default)
+    {
+        return predicate == null 
+            ? await DbSet.CountAsync(cancellationToken) 
+            : await DbSet.CountAsync(predicate, cancellationToken);
+    }
+
+    public virtual async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default)
+    {
+        await DbSet.AddAsync(entity, cancellationToken);
+    }
+
+    public virtual async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    {
+        await DbSet.AddRangeAsync(entities, cancellationToken);
+    }
+
+    public virtual void Update(TEntity entity)
+    {
+        DbSet.Update(entity);
+    }
+
+    public virtual void UpdateRange(IEnumerable<TEntity> entities)
+    {
+        DbSet.UpdateRange(entities);
+    }
+
+    public virtual void Remove(TEntity entity)
+    {
+        DbSet.Remove(entity);
+    }
+
+    public virtual void RemoveRange(IEnumerable<TEntity> entities)
+    {
+        DbSet.RemoveRange(entities);
+    }
+}

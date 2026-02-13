@@ -1,4 +1,5 @@
 ﻿using BlazorApp01.DataAccess.Contexts;
+using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Domain.Enums;
 using BlazorApp01.Domain.Models;
 using Microsoft.EntityFrameworkCore;
@@ -16,15 +17,6 @@ public static class DataAccessRegistration
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        //services.AddDbContext<AppDbContext>(options =>
-        //{
-        //    options.UseSqlServer(connectionString);
-        //    if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
-        //    {
-        //        options.EnableSensitiveDataLogging();
-        //    }
-        //});
-
         services.AddDbContextFactory<AppDbContext>(options =>
         {
             options.UseSqlServer(connectionString);
@@ -33,6 +25,9 @@ public static class DataAccessRegistration
                 options.EnableSensitiveDataLogging();
             }
         });
+
+        // Register Unit of Work with Scoped lifetime for Blazor
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
