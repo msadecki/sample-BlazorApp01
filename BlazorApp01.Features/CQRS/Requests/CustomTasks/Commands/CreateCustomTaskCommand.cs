@@ -16,15 +16,8 @@ public sealed record CreateCustomTaskCommand(
     bool IsActive
 ) : ICommand<int>;
 
-internal sealed class CreateCustomTaskCommandHandler : ICommandHandler<CreateCustomTaskCommand, int>
+internal sealed class CreateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : ICommandHandler<CreateCustomTaskCommand, int>
 {
-    private readonly IUnitOfWork _unitOfWork;
-
-    public CreateCustomTaskCommandHandler(IUnitOfWork unitOfWork)
-    {
-        _unitOfWork = unitOfWork;
-    }
-
     public async ValueTask<Result<int>> Handle(CreateCustomTaskCommand command, CancellationToken cancellationToken)
     {
         var customTask = new CustomTask
@@ -37,8 +30,8 @@ internal sealed class CreateCustomTaskCommandHandler : ICommandHandler<CreateCus
             IsActive = command.IsActive
         };
 
-        await _unitOfWork.CustomTasksRepository.AddAsync(customTask, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.CustomTasksRepository.AddAsync(customTask, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return customTask.CustomTaskId;
     }

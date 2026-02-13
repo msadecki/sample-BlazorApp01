@@ -35,7 +35,7 @@ public static class BackgroundProcessingRegistration
         recurringJobManager.AddOrUpdate<AddRandomCustomTaskJob>(
             $"RecurringJob-{nameof(AddRandomCustomTaskJob)}",
             job => job.ExecuteAsync(),
-            configuration.GetSection("CronJobs:AddRandomCustomTaskJob")?.Value ?? "0 * * * *"
+            configuration.GetSection("CronJobs:AddRandomCustomTaskJob")?.Value ?? "*/5 * * * *"
         );
     }
 }
