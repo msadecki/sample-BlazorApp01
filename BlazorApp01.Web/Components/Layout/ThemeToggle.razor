@@ -1,7 +1,5 @@
 ﻿@rendermode InteractiveServer
-@using BlazorApp01.Web.Services
 @using Microsoft.AspNetCore.Components.Authorization
-@inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @implements IAsyncDisposable
@@ -48,7 +46,6 @@
                 _themeModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/theme.js");
                 _currentTheme = await _themeModule.InvokeAsync<string>("getTheme");
                 
-                ThemeService.SetTheme(_currentTheme);
                 await _themeModule.InvokeVoidAsync("setTheme", _currentTheme);
                 
                 _hasRendered = true;
@@ -77,7 +74,6 @@
                 _ => "light"
             };
 
-            ThemeService.SetTheme(_currentTheme);
             await _themeModule.InvokeVoidAsync("saveTheme", _currentTheme);
             await _themeModule.InvokeVoidAsync("setTheme", _currentTheme);
             
