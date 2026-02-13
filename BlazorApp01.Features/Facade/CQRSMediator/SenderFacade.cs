@@ -16,21 +16,21 @@ internal sealed class SenderFacade(ISender sender, ILogger<SenderFacade> logger)
 {
     public async ValueTask<Result<TResponse>> SendAsync<TResponse>(Abstractions.ICommand<TResponse> request, CancellationToken cancellationToken = default)
     {
-        return await BaseSendAsync<Result<TResponse>, TResponse>(request, cancellationToken);
+        return await BaseSendAsync<Result<TResponse>>(request, cancellationToken);
     }
 
     public async ValueTask<Result> SendAsync(Abstractions.ICommand request, CancellationToken cancellationToken = default)
     {
-        return await BaseSendAsync(request, cancellationToken);
+        return await BaseSendAsync<Result>(request, cancellationToken);
     }
 
     public async ValueTask<Result<TResponse>> SendAsync<TResponse>(Abstractions.IQuery<TResponse> request, CancellationToken cancellationToken = default)
     {
-        return await BaseSendAsync<Result<TResponse>, TResponse>(request, cancellationToken);
+        return await BaseSendAsync<Result<TResponse>>(request, cancellationToken);
     }
 
-    private async ValueTask<TResult> BaseSendAsync<TResult, TResponse>(IRequest<TResult> request, CancellationToken cancellationToken = default)
-        where TResult : Result<TResponse>
+    private async ValueTask<TResult> BaseSendAsync<TResult>(IRequest<TResult> request, CancellationToken cancellationToken = default)
+        where TResult : IResult
     {
         logger.LogInformation("Handling {1}", request.ToString());
 
@@ -43,14 +43,20 @@ internal sealed class SenderFacade(ISender sender, ILogger<SenderFacade> logger)
         {
             logger.LogError(ex, "Exception thrown while handling {1}: {2}", request.ToString(), ex.Message);
 
-            result = (TResult)Result.Error("Unexpected error occurred.");
+            result = (TResult)CreateErrorResult<TResult>("Unexpected error occurred.");
 
             return result;
         }
 
         if (result.IsOk() || result.IsNoContent() || result.IsCreated())
         {
-            logger.LogInformation("Handled {1}: Result status: {2}, Result value type: {3}", request.ToString(), result.Status, result.GetValue()?.ToString());
+            var resultValue = result.GetValue();
+
+            var valueInfo = resultValue != null
+                ? $", Result value type: {resultValue.GetType().Name}"
+                : string.Empty;
+
+            logger.LogInformation("Handled {1}: Result status: {2}{3}", request.ToString(), result.Status, valueInfo);
         }
         else
         {
@@ -60,33 +66,17 @@ internal sealed class SenderFacade(ISender sender, ILogger<SenderFacade> logger)
         return result;
     }
 
-    private async ValueTask<Result> BaseSendAsync(IRequest<Result> request, CancellationToken cancellationToken = default)
+    private static IResult CreateErrorResult<TResult>(string errorMessage) where TResult : IResult
     {
-        logger.LogInformation("Handling {1}", request.ToString());
+        var resultType = typeof(TResult);
 
-        Result result;
-        try
+        if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Result<>))
         {
-            result = await sender.Send(request, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Exception thrown while handling {1}: {2}", request.ToString(), ex.Message);
-
-            result = Result.Error("Unexpected error occurred.");
-
-            return result;
+            var responseType = resultType.GetGenericArguments()[0];
+            var errorMethod = typeof(Result<>).MakeGenericType(responseType).GetMethod("Error", [typeof(string)]);
+            return (IResult)errorMethod!.Invoke(null, [errorMessage])!;
         }
 
-        if (result.IsOk() || result.IsNoContent() || result.IsCreated())
-        {
-            logger.LogInformation("Handled {1}: Result status: {2}", request.ToString(), result.Status);
-        }
-        else
-        {
-            logger.LogInformation("Handled {1}: Result status: {2}, Errors: {3}", request.ToString(), result.Status, result.MergedErrors());
-        }
-
-        return result;
+        return Result.Error(errorMessage);
     }
 }
