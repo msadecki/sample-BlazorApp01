@@ -4,8 +4,10 @@
 @using BlazorApp01.Features.CQRS.MediatorFacade
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@using BlazorApp01.Web.Services
 @inject ISenderFacade Sender
 @inject NavigationManager NavigationManager
+@inject IDateTimeHelper DateTimeHelper
 
 <PageTitle>Delete</PageTitle>
 
@@ -32,16 +34,16 @@
             <dt class="col-sm-2">Status</dt>
             <dd class="col-sm-10">@customTask.Status</dd>
 
-            <dt class="col-sm-2">CreatedAt</dt>
-            <dd class="col-sm-10">@customTask.CreatedAt.ToString("g")</dd>
+            <dt class="col-sm-2">Created At (Your Time Zone)</dt>
+            <dd class="col-sm-10">@DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CreatedAt)</dd>
 
-            <dt class="col-sm-2">DueDate</dt>
-            <dd class="col-sm-10">@customTask.DueDate.ToString("d")</dd>
+            <dt class="col-sm-2">Due Date</dt>
+            <dd class="col-sm-10">@DateTimeHelper.ConvertToFormattedDate(customTask.DueDate)</dd>
 
-            <dt class="col-sm-2">CompletionDate</dt>
-            <dd class="col-sm-10">@(customTask.CompletionDate?.ToString("g") ?? "Not completed")</dd>
+            <dt class="col-sm-2">Completion Date (Your Time Zone)</dt>
+            <dd class="col-sm-10">@(DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CompletionDate) ?? "Not completed")</dd>
 
-            <dt class="col-sm-2">IsActive</dt>
+            <dt class="col-sm-2">Is Active</dt>
             <dd class="col-sm-10">@(customTask.IsActive ? "Yes" : "No")</dd>
         </dl>
 
@@ -82,6 +84,10 @@
         if (result.IsSuccess)
         {
             customTask = result.Value;
+        }
+        else
+        {
+            errorMessage = "Failed to load task: " + string.Join(", ", result.Errors);
         }
 
         isLoading = false;

@@ -5,8 +5,10 @@
 @using BlazorApp01.Features.CQRS.MediatorFacade
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@using BlazorApp01.Web.Services
 @inject ISenderFacade Sender
 @inject NavigationManager NavigationManager
+@inject IDateTimeHelper DateTimeHelper
 
 <PageTitle>Edit</PageTitle>
 
@@ -43,7 +45,7 @@ else
                 <div class="form-group">
                     <label for="Status" class="control-label">Status</label>
                     <InputSelect id="Status" @bind-Value="customTask.Status" class="form-control">
-                        @foreach (var status in Enum.GetValues<CustomTaskStatus>())
+                        @foreach (CustomTaskStatus status in Enum.GetValues<CustomTaskStatus>())
                         {
                             <option value="@status">@status</option>
                         }
@@ -51,19 +53,24 @@ else
                     <ValidationMessage For="() => customTask.Status" class="text-danger" />
                 </div>
                 <div class="form-group">
-                    <label for="CreatedAt" class="control-label">CreatedAt</label>
+                    <label for="CreatedAt" class="control-label">Created At</label>
                     <InputDate Type="InputDateType.DateTimeLocal" id="CreatedAt" @bind-Value="customTask.CreatedAt" class="form-control" />
                     <ValidationMessage For="() => customTask.CreatedAt" class="text-danger" />
+                    <small class="form-text text-muted">Currently: @DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CreatedAt)</small>
                 </div>
                 <div class="form-group">
-                    <label for="DueDate" class="control-label">DueDate</label>
+                    <label for="DueDate" class="control-label">Due Date</label>
                     <InputDate id="DueDate" @bind-Value="customTask.DueDate" class="form-control" />
                     <ValidationMessage For="() => customTask.DueDate" class="text-danger" />
                 </div>
                 <div class="form-group">
-                    <label for="CompletionDate" class="control-label">CompletionDate</label>
+                    <label for="CompletionDate" class="control-label">Completion Date</label>
                     <InputDate Type="InputDateType.DateTimeLocal" id="CompletionDate" @bind-Value="customTask.CompletionDate" class="form-control" />
                     <ValidationMessage For="() => customTask.CompletionDate" class="text-danger" />
+                    @if (customTask.CompletionDate.HasValue)
+                    {
+                        <small class="form-text text-muted">Currently: @DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CompletionDate)</small>
+                    }
                 </div>
                 <div class="form-group form-check">
                     <label class="form-check-label">
@@ -93,39 +100,26 @@ else
     [SupplyParameterFromQuery]
     public int CustomTaskId { get; set; }
 
-    [SupplyParameterFromForm]
-    private CustomTaskModel? customTask { get; set; }
-
+    private CustomTask? customTask;
     private bool isLoading = true;
     private bool isSubmitting = false;
     private string errorMessage = string.Empty;
-    private byte[] rowVersion = Array.Empty<byte>();
 
     protected override async Task OnInitializedAsync()
     {
-        if (customTask == null)
+        var query = new GetCustomTaskByIdQuery(CustomTaskId);
+        var result = await Sender.SendAsync(query);
+
+        if (result.IsSuccess)
         {
-            var query = new GetCustomTaskByIdQuery(CustomTaskId);
-            var result = await Sender.SendAsync(query);
-
-            if (result.IsSuccess && result.Value != null)
-            {
-                var task = result.Value;
-                customTask = new CustomTaskModel
-                {
-                    CustomTaskId = task.CustomTaskId,
-                    Description = task.Description,
-                    Status = task.Status,
-                    CreatedAt = task.CreatedAt,
-                    DueDate = task.DueDate,
-                    CompletionDate = task.CompletionDate,
-                    IsActive = task.IsActive
-                };
-                rowVersion = task.RowVersion;
-            }
-
-            isLoading = false;
+            customTask = result.Value;
         }
+        else
+        {
+            errorMessage = "Failed to load task: " + string.Join(", ", result.Errors);
+        }
+
+        isLoading = false;
     }
 
     private async Task UpdateCustomTask()
@@ -138,48 +132,27 @@ else
         isSubmitting = true;
         errorMessage = string.Empty;
 
-        try
-        {
-            var command = new UpdateCustomTaskCommand(
-                CustomTaskId: customTask.CustomTaskId,
-                Description: customTask.Description,
-                Status: customTask.Status,
-                CreatedAt: customTask.CreatedAt,
-                DueDate: customTask.DueDate,
-                CompletionDate: customTask.CompletionDate,
-                IsActive: customTask.IsActive,
-                RowVersion: rowVersion
-            );
+        var command = new UpdateCustomTaskCommand(
+            CustomTaskId: customTask.CustomTaskId,
+            Description: customTask.Description,
+            Status: customTask.Status,
+            CreatedAt: customTask.CreatedAt,
+            DueDate: customTask.DueDate,
+            CompletionDate: customTask.CompletionDate,
+            IsActive: customTask.IsActive,
+            RowVersion: customTask.RowVersion
+        );
 
-            var result = await Sender.SendAsync(command);
+        var result = await Sender.SendAsync(command);
 
-            if (result.IsSuccess && result.Value)
-            {
-                NavigationManager.NavigateTo("/customtasks");
-            }
-            else
-            {
-                errorMessage = "Failed to update custom task. It may have been modified by another user.";
-            }
-        }
-        catch (Exception ex)
+        if (result.IsSuccess)
         {
-            errorMessage = $"An error occurred: {ex.Message}";
+            NavigationManager.NavigateTo("/customtasks");
         }
-        finally
+        else
         {
+            errorMessage = "Failed to update task: " + string.Join(", ", result.Errors);
             isSubmitting = false;
         }
-    }
-
-    private sealed class CustomTaskModel
-    {
-        public int CustomTaskId { get; set; }
-        public string Description { get; set; } = string.Empty;
-        public CustomTaskStatus Status { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateOnly DueDate { get; set; }
-        public DateTime? CompletionDate { get; set; }
-        public bool IsActive { get; set; }
     }
 }

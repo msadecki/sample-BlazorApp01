@@ -4,7 +4,9 @@
 @using BlazorApp01.Domain.Models
 @using BlazorApp01.Features.CQRS.MediatorFacade
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@using BlazorApp01.Web.Services
 @inject ISenderFacade Sender
+@inject IDateTimeHelper DateTimeHelper
 
 <PageTitle>Index</PageTitle>
 
@@ -19,11 +21,10 @@
 <QuickGrid Class="table" ItemsProvider="customTasksProvider" Pagination="pagination">
     <PropertyColumn Property="customtask => customtask.Description" Sortable="true" />
     <PropertyColumn Property="customtask => customtask.Status" Sortable="true" />
-    <PropertyColumn Property="customtask => customtask.CreatedAt" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.CreatedAtUserTZ" Title="Created At" Sortable="true" />
     <PropertyColumn Property="customtask => customtask.DueDate" Sortable="true" />
-    <PropertyColumn Property="customtask => customtask.CompletionDate" Sortable="true" />
+    <PropertyColumn Property="customtask => customtask.CompletionDateUserTZ" Title="Completion Date" Sortable="true" />
     <PropertyColumn Property="customtask => customtask.IsActive" Sortable="true" />
-    <PropertyColumn Property="customtask => customtask.RowVersion" Sortable="true" />
 
     <TemplateColumn Context="customtask">
         <a href="@($"customtasks/edit?customtaskid={customtask.CustomTaskId}")">Edit</a> |
@@ -38,7 +39,7 @@
 
     private string descriptionFilter = string.Empty;
 
-    private GridItemsProvider<CustomTask>? customTasksProvider;
+    private GridItemsProvider<CustomTaskViewModel>? customTasksProvider;
 
     protected override void OnInitialized()
     {
@@ -49,8 +50,13 @@
 
             if (request.GetSortByProperties().Any())
             {
-                var sortProperty = request.GetSortByProperties().First();
-                sortBy = sortProperty.PropertyName;
+                SortedProperty sortProperty = request.GetSortByProperties().First();
+                sortBy = sortProperty.PropertyName switch
+                {
+                    nameof(CustomTaskViewModel.CreatedAtUserTZ) => nameof(CustomTask.CreatedAt),
+                    nameof(CustomTaskViewModel.CompletionDateUserTZ) => nameof(CustomTask.CompletionDate),
+                    _ => sortProperty.PropertyName
+                };
                 sortAscending = sortProperty.Direction == SortDirection.Ascending;
             }
 
@@ -66,12 +72,37 @@
 
             var response = responseResult.Value;
 
-            return GridItemsProviderResult.From(response.Items, response.TotalCount);
+            // Map to view models
+            var viewModels = response.Items
+                .Select(task => new CustomTaskViewModel(task, DateTimeHelper))
+                .ToList();
+
+            return GridItemsProviderResult.From(viewModels, response.TotalCount);
         };
     }
 
     private async Task RefreshGridAsync()
     {
         await pagination.SetCurrentPageIndexAsync(0);
+    }
+
+    private sealed class CustomTaskViewModel
+    {
+        private readonly CustomTask _task;
+        private readonly IDateTimeHelper _dateTimeHelper;
+
+        public CustomTaskViewModel(CustomTask task, IDateTimeHelper dateTimeHelper)
+        {
+            _task = task;
+            _dateTimeHelper = dateTimeHelper;
+        }
+
+        public int CustomTaskId => _task.CustomTaskId;
+        public string Description => _task.Description;
+        public string Status => _task.Status.ToString();
+        public DateOnly DueDate => _task.DueDate;
+        public bool IsActive => _task.IsActive;
+        public string CreatedAtUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_task.CreatedAt);
+        public string CompletionDateUserTZ => _dateTimeHelper.ConvertToFormattedUserDateTime(_task.CompletionDate);
     }
 }

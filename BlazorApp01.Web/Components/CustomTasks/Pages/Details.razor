@@ -3,7 +3,9 @@
 @using BlazorApp01.Domain.Models
 @using BlazorApp01.Features.CQRS.MediatorFacade
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@using BlazorApp01.Web.Services
 @inject ISenderFacade Sender
+@inject IDateTimeHelper DateTimeHelper
 
 <PageTitle>Details</PageTitle>
 
@@ -29,14 +31,14 @@
             <dt class="col-sm-2">Status</dt>
             <dd class="col-sm-10">@customTask.Status</dd>
 
-            <dt class="col-sm-2">CreatedAt</dt>
-            <dd class="col-sm-10">@customTask.CreatedAt.ToString("g")</dd>
+            <dt class="col-sm-2">CreatedAt (Your Time Zone)</dt>
+            <dd class="col-sm-10">@DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CreatedAt)</dd>
 
             <dt class="col-sm-2">DueDate</dt>
-            <dd class="col-sm-10">@customTask.DueDate.ToString("d")</dd>
+            <dd class="col-sm-10">@DateTimeHelper.ConvertToFormattedDate(customTask.DueDate)</dd>
 
-            <dt class="col-sm-2">CompletionDate</dt>
-            <dd class="col-sm-10">@(customTask.CompletionDate?.ToString("g") ?? "Not completed")</dd>
+            <dt class="col-sm-2">CompletionDate (Your Time Zone)</dt>
+            <dd class="col-sm-10">@(DateTimeHelper.ConvertToFormattedUserDateTime(customTask.CompletionDate) ?? "Not completed")</dd>
 
             <dt class="col-sm-2">IsActive</dt>
             <dd class="col-sm-10">@(customTask.IsActive ? "Yes" : "No")</dd>
