@@ -1,57 +1,77 @@
 ﻿@page "/customtasks/details"
+@rendermode InteractiveServer
 @using BlazorApp01.Domain.Models
-@using BlazorApp01.DataAccess.Repositories
-@inject IUnitOfWork UnitOfWork
-@inject NavigationManager NavigationManager
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@inject ISenderFacade Sender
 
 <PageTitle>Details</PageTitle>
 
 <h1>Details</h1>
 
 <div>
-    <h2>CustomTask</h2>
+    <h4>CustomTask</h4>
     <hr />
-    @if (customtask is null)
+    @if (isLoading)
     {
         <p><em>Loading...</em></p>
     }
-    else {
+    else if (customTask == null)
+    {
+        <p class="alert alert-danger">CustomTask not found.</p>
+    }
+    else
+    {
         <dl class="row">
             <dt class="col-sm-2">Description</dt>
-            <dd class="col-sm-10">@customtask.Description</dd>
+            <dd class="col-sm-10">@customTask.Description</dd>
+
             <dt class="col-sm-2">Status</dt>
-            <dd class="col-sm-10">@customtask.Status</dd>
+            <dd class="col-sm-10">@customTask.Status</dd>
+
             <dt class="col-sm-2">CreatedAt</dt>
-            <dd class="col-sm-10">@customtask.CreatedAt</dd>
+            <dd class="col-sm-10">@customTask.CreatedAt.ToString("g")</dd>
+
             <dt class="col-sm-2">DueDate</dt>
-            <dd class="col-sm-10">@customtask.DueDate</dd>
+            <dd class="col-sm-10">@customTask.DueDate.ToString("d")</dd>
+
             <dt class="col-sm-2">CompletionDate</dt>
-            <dd class="col-sm-10">@customtask.CompletionDate</dd>
+            <dd class="col-sm-10">@(customTask.CompletionDate?.ToString("g") ?? "Not completed")</dd>
+
             <dt class="col-sm-2">IsActive</dt>
-            <dd class="col-sm-10">@customtask.IsActive</dd>
+            <dd class="col-sm-10">@(customTask.IsActive ? "Yes" : "No")</dd>
+
             <dt class="col-sm-2">RowVersion</dt>
-            <dd class="col-sm-10">@customtask.RowVersion</dd>
+            <dd class="col-sm-10">@Convert.ToBase64String(customTask.RowVersion)</dd>
         </dl>
-        <div>
-            <a href="@($"/customtasks/edit?customtaskid={customtask.CustomTaskId}")">Edit</a> |
-            <a href="@($"/customtasks")">Back to List</a>
-        </div>
     }
+</div>
+<div>
+    @if (customTask != null)
+    {
+        <a href="@($"/customtasks/edit?customtaskid={customTask.CustomTaskId}")">Edit</a>
+        <span> | </span>
+    }
+    <a href="/customtasks">Back to List</a>
 </div>
 
 @code {
-    private CustomTask? customtask;
-
     [SupplyParameterFromQuery]
-    private int CustomTaskId { get; set; }
+    public int CustomTaskId { get; set; }
+
+    private CustomTask? customTask;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        customtask = await UnitOfWork.CustomTasksRepository.GetByIdAsync(CustomTaskId);
+        var query = new GetCustomTaskByIdQuery(CustomTaskId);
+        var result = await Sender.SendAsync(query);
 
-        if (customtask is null)
+        if (result.IsSuccess)
         {
-            NavigationManager.NotFound();
+            customTask = result.Value;
         }
+
+        isLoading = false;
     }
 }

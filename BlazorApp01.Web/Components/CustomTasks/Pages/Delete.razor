@@ -1,77 +1,118 @@
 ﻿@page "/customtasks/delete"
+@rendermode InteractiveServer
 @using BlazorApp01.Domain.Models
-@using BlazorApp01.DataAccess.Repositories
-@inject IUnitOfWork UnitOfWork
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands
+@using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@inject ISenderFacade Sender
 @inject NavigationManager NavigationManager
 
 <PageTitle>Delete</PageTitle>
 
 <h1>Delete</h1>
 
-<p>Are you sure you want to delete this?</p>
+<h3>Are you sure you want to delete this?</h3>
 <div>
-    <h2>CustomTask</h2>
+    <h4>CustomTask</h4>
     <hr />
-    @if (customtask is null)
+    @if (isLoading)
     {
         <p><em>Loading...</em></p>
     }
-    else {
+    else if (customTask == null)
+    {
+        <p class="alert alert-danger">CustomTask not found.</p>
+    }
+    else
+    {
         <dl class="row">
             <dt class="col-sm-2">Description</dt>
-            <dd class="col-sm-10">@customtask.Description</dd>
-        </dl>
-        <dl class="row">
+            <dd class="col-sm-10">@customTask.Description</dd>
+
             <dt class="col-sm-2">Status</dt>
-            <dd class="col-sm-10">@customtask.Status</dd>
-        </dl>
-        <dl class="row">
+            <dd class="col-sm-10">@customTask.Status</dd>
+
             <dt class="col-sm-2">CreatedAt</dt>
-            <dd class="col-sm-10">@customtask.CreatedAt</dd>
-        </dl>
-        <dl class="row">
+            <dd class="col-sm-10">@customTask.CreatedAt.ToString("g")</dd>
+
             <dt class="col-sm-2">DueDate</dt>
-            <dd class="col-sm-10">@customtask.DueDate</dd>
-        </dl>
-        <dl class="row">
+            <dd class="col-sm-10">@customTask.DueDate.ToString("d")</dd>
+
             <dt class="col-sm-2">CompletionDate</dt>
-            <dd class="col-sm-10">@customtask.CompletionDate</dd>
-        </dl>
-        <dl class="row">
+            <dd class="col-sm-10">@(customTask.CompletionDate?.ToString("g") ?? "Not completed")</dd>
+
             <dt class="col-sm-2">IsActive</dt>
-            <dd class="col-sm-10">@customtask.IsActive</dd>
+            <dd class="col-sm-10">@(customTask.IsActive ? "Yes" : "No")</dd>
         </dl>
-        <dl class="row">
-            <dt class="col-sm-2">RowVersion</dt>
-            <dd class="col-sm-10">@customtask.RowVersion</dd>
-        </dl>
-        <EditForm method="post" Model="customtask" OnValidSubmit="DeleteCustomTask" FormName="delete" Enhance>
-            <button type="submit" class="btn btn-danger" disabled="@(customtask is null)">Delete</button> |
+
+        <EditForm Model="customTask" OnValidSubmit="DeleteCustomTask" FormName="delete">
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+            <button type="submit" class="btn btn-danger" disabled="@isDeleting">
+                @(isDeleting ? "Deleting..." : "Delete")
+            </button>
+            <span> | </span>
             <a href="/customtasks">Back to List</a>
         </EditForm>
+    }
+    @if (!isLoading && customTask == null)
+    {
+        <div>
+            <a href="/customtasks">Back to List</a>
+        </div>
     }
 </div>
 
 @code {
-    private CustomTask? customtask;
-
     [SupplyParameterFromQuery]
-    private int CustomTaskId { get; set; }
+    public int CustomTaskId { get; set; }
+
+    private CustomTask? customTask;
+    private bool isLoading = true;
+    private bool isDeleting = false;
+    private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        customtask = await UnitOfWork.CustomTasksRepository.GetByIdAsync(CustomTaskId);
+        var query = new GetCustomTaskByIdQuery(CustomTaskId);
+        var result = await Sender.SendAsync(query);
 
-        if (customtask is null)
+        if (result.IsSuccess)
         {
-            NavigationManager.NotFound();
+            customTask = result.Value;
         }
+
+        isLoading = false;
     }
 
     private async Task DeleteCustomTask()
     {
-        UnitOfWork.CustomTasksRepository.Remove(customtask!);
-        await UnitOfWork.SaveChangesAsync();
-        NavigationManager.NavigateTo("/customtasks");
+        isDeleting = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var command = new DeleteCustomTaskCommand(CustomTaskId);
+            var result = await Sender.SendAsync(command);
+
+            if (result.IsSuccess && result.Value)
+            {
+                NavigationManager.NavigateTo("/customtasks");
+            }
+            else
+            {
+                errorMessage = "Failed to delete custom task. It may have already been deleted.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
     }
 }

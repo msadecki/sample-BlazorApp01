@@ -1,119 +1,185 @@
 ﻿@page "/customtasks/edit"
-@using Microsoft.EntityFrameworkCore
-@using BlazorApp01.Domain.Models
+@rendermode InteractiveServer
 @using BlazorApp01.Domain.Enums
-@using BlazorApp01.DataAccess.Repositories
-@inject IUnitOfWork UnitOfWork
+@using BlazorApp01.Domain.Models
+@using BlazorApp01.Features.CQRS.MediatorFacade
+@using BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands
+@using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@inject ISenderFacade Sender
 @inject NavigationManager NavigationManager
 
 <PageTitle>Edit</PageTitle>
 
 <h1>Edit</h1>
 
-<h2>CustomTask</h2>
+<h4>CustomTask</h4>
 <hr />
-@if (CustomTask is null)
+
+@if (isLoading)
 {
     <p><em>Loading...</em></p>
+}
+else if (customTask == null)
+{
+    <p class="alert alert-danger">CustomTask not found.</p>
+    <div>
+        <a href="/customtasks">Back to List</a>
+    </div>
 }
 else
 {
     <div class="row">
         <div class="col-md-4">
-            <EditForm method="post" Model="CustomTask" OnValidSubmit="UpdateCustomTask" FormName="edit" Enhance>
+            <EditForm Model="customTask" OnValidSubmit="UpdateCustomTask" FormName="edit">
                 <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
-                <input type="hidden" name="CustomTask.CustomTaskId" value="@CustomTask.CustomTaskId" />
-                <div class="mb-3">
-                <span class="text-danger">*</span>
-                    <label for="description" class="form-label">Description:</label>
-                    <InputText id="description" @bind-Value="CustomTask.Description" class="form-control" aria-required="true"/>
-                    <ValidationMessage For="() => CustomTask.Description" class="text-danger" />
+                <ValidationSummary class="text-danger" />
+                <input type="hidden" @bind="customTask.CustomTaskId" />
+                <div class="form-group">
+                    <span class="text-danger">*</span>
+                    <label for="Description" class="control-label">Description</label>
+                    <InputText id="Description" @bind-Value="customTask.Description" class="form-control" />
+                    <ValidationMessage For="() => customTask.Description" class="text-danger" />
                 </div>
-                <div class="mb-3">
-                    <label for="status" class="form-label">Status:</label>
-                    <InputSelect id="status" @bind-Value="CustomTask.Status" class="form-control">
+                <div class="form-group">
+                    <label for="Status" class="control-label">Status</label>
+                    <InputSelect id="Status" @bind-Value="customTask.Status" class="form-control">
                         @foreach (var status in Enum.GetValues<CustomTaskStatus>())
                         {
                             <option value="@status">@status</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="() => CustomTask.Status" class="text-danger" />
+                    <ValidationMessage For="() => customTask.Status" class="text-danger" />
                 </div>
-                <div class="mb-3">
-                    <label for="createdat" class="form-label">CreatedAt:</label>
-                    <InputDate Type="InputDateType.DateTimeLocal" id="createdat" @bind-Value="CustomTask.CreatedAt" class="form-control" />
-                    <ValidationMessage For="() => CustomTask.CreatedAt" class="text-danger" />
+                <div class="form-group">
+                    <label for="CreatedAt" class="control-label">CreatedAt</label>
+                    <InputDate Type="InputDateType.DateTimeLocal" id="CreatedAt" @bind-Value="customTask.CreatedAt" class="form-control" />
+                    <ValidationMessage For="() => customTask.CreatedAt" class="text-danger" />
                 </div>
-                <div class="mb-3">
-                    <label for="duedate" class="form-label">DueDate:</label>
-                    <InputDate id="duedate" @bind-Value="CustomTask.DueDate" class="form-control" />
-                    <ValidationMessage For="() => CustomTask.DueDate" class="text-danger" />
+                <div class="form-group">
+                    <label for="DueDate" class="control-label">DueDate</label>
+                    <InputDate id="DueDate" @bind-Value="customTask.DueDate" class="form-control" />
+                    <ValidationMessage For="() => customTask.DueDate" class="text-danger" />
                 </div>
-                <div class="mb-3">
-                    <label for="completiondate" class="form-label">CompletionDate:</label>
-                    <InputDate Type="InputDateType.DateTimeLocal" id="completiondate" @bind-Value="CustomTask.CompletionDate" class="form-control" />
-                    <ValidationMessage For="() => CustomTask.CompletionDate" class="text-danger" />
+                <div class="form-group">
+                    <label for="CompletionDate" class="control-label">CompletionDate</label>
+                    <InputDate Type="InputDateType.DateTimeLocal" id="CompletionDate" @bind-Value="customTask.CompletionDate" class="form-control" />
+                    <ValidationMessage For="() => customTask.CompletionDate" class="text-danger" />
                 </div>
-                <div class="mb-3">
-                    <label for="isactive" class="form-label">IsActive:</label>
-                    <InputCheckbox id="isactive" @bind-Value="CustomTask.IsActive" class="form-check-input" />
-                    <ValidationMessage For="() => CustomTask.IsActive" class="text-danger" />
+                <div class="form-group form-check">
+                    <label class="form-check-label">
+                        <InputCheckbox id="IsActive" @bind-Value="customTask.IsActive" class="form-check-input" />
+                        IsActive
+                    </label>
                 </div>
-                <button type="submit" class="btn btn-primary">Save</button>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mt-3">@errorMessage</div>
+                }
+                <div class="form-group mt-3">
+                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                        @(isSubmitting ? "Saving..." : "Save")
+                    </button>
+                </div>
             </EditForm>
         </div>
     </div>
-}
 
-<div>
-    <a href="/customtasks">Back to List</a>
-</div>
+    <div>
+        <a href="/customtasks">Back to List</a>
+    </div>
+}
 
 @code {
     [SupplyParameterFromQuery]
-    private int CustomTaskId { get; set; }
+    public int CustomTaskId { get; set; }
 
     [SupplyParameterFromForm]
-    private CustomTask? CustomTask { get; set; }
+    private CustomTaskModel? customTask { get; set; }
+
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+    private byte[] rowVersion = Array.Empty<byte>();
 
     protected override async Task OnInitializedAsync()
     {
-        CustomTask ??= await UnitOfWork.CustomTasksRepository.GetByIdAsync(CustomTaskId);
-
-        if (CustomTask is null)
+        if (customTask == null)
         {
-            NavigationManager.NotFound();
+            var query = new GetCustomTaskByIdQuery(CustomTaskId);
+            var result = await Sender.SendAsync(query);
+
+            if (result.IsSuccess && result.Value != null)
+            {
+                var task = result.Value;
+                customTask = new CustomTaskModel
+                {
+                    CustomTaskId = task.CustomTaskId,
+                    Description = task.Description,
+                    Status = task.Status,
+                    CreatedAt = task.CreatedAt,
+                    DueDate = task.DueDate,
+                    CompletionDate = task.CompletionDate,
+                    IsActive = task.IsActive
+                };
+                rowVersion = task.RowVersion;
+            }
+
+            isLoading = false;
         }
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task UpdateCustomTask()
     {
-        UnitOfWork.CustomTasksRepository.Update(CustomTask!);
+        if (customTask == null)
+        {
+            return;
+        }
+
+        isSubmitting = true;
+        errorMessage = string.Empty;
 
         try
         {
-            await UnitOfWork.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!await CustomTaskExists(CustomTask!.CustomTaskId))
+            var command = new UpdateCustomTaskCommand(
+                CustomTaskId: customTask.CustomTaskId,
+                Description: customTask.Description,
+                Status: customTask.Status,
+                CreatedAt: customTask.CreatedAt,
+                DueDate: customTask.DueDate,
+                CompletionDate: customTask.CompletionDate,
+                IsActive: customTask.IsActive,
+                RowVersion: rowVersion
+            );
+
+            var result = await Sender.SendAsync(command);
+
+            if (result.IsSuccess && result.Value)
             {
-                NavigationManager.NotFound();
+                NavigationManager.NavigateTo("/customtasks");
             }
             else
             {
-                throw;
+                errorMessage = "Failed to update custom task. It may have been modified by another user.";
             }
         }
-
-        NavigationManager.NavigateTo("/customtasks");
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 
-    private async Task<bool> CustomTaskExists(int customtaskid)
+    private sealed class CustomTaskModel
     {
-        return await UnitOfWork.CustomTasksRepository.AnyAsync(customTask => customTask.CustomTaskId == customtaskid);
+        public int CustomTaskId { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public CustomTaskStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateOnly DueDate { get; set; }
+        public DateTime? CompletionDate { get; set; }
+        public bool IsActive { get; set; }
     }
 }
