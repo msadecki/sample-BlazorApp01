@@ -42,6 +42,8 @@ internal sealed class OutboxService(IUnitOfWork unitOfWork) : IOutboxService
             message.PublishedAt = DateTime.UtcNow;
             unitOfWork.Repository<OutboxMessage>().Update(message);
         }
+
+        await unitOfWork.SaveChangesAsync();
     }
 
     public async Task MarkAsFailedAsync(long id, string error, CancellationToken cancellationToken = default)
@@ -55,5 +57,7 @@ internal sealed class OutboxService(IUnitOfWork unitOfWork) : IOutboxService
             message.ProcessedAt = DateTime.UtcNow;
             unitOfWork.Repository<OutboxMessage>().Update(message);
         }
+
+        await unitOfWork.SaveChangesAsync();
     }
 }

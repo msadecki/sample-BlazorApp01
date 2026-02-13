@@ -1,4 +1,5 @@
 using BlazorApp01.Messaging.Configuration;
+using BlazorApp01.Messaging.Facade;
 using MassTransit;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,8 @@ public static class MessagingRegistration
                 configurator.ConfigureEndpoints(context);
             });
         });
+
+        services.AddScoped<IPublishEndpointFacade, PublishEndpointFacade>();
 
         return services;
     }

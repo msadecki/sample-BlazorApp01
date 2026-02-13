@@ -1,7 +1,6 @@
 using System.Text.Json;
-using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Features.Services.EventStore;
-using MassTransit;
+using BlazorApp01.Messaging.Facade;
 using Microsoft.Extensions.Logging;
 
 namespace BlazorApp01.BackgroundProcessing.Jobs;
@@ -10,10 +9,9 @@ namespace BlazorApp01.BackgroundProcessing.Jobs;
 /// Background job that processes outbox messages and publishes them to RabbitMQ.
 /// </summary>
 internal sealed class OutboxProcessorJob(
-    IUnitOfWork unitOfWork,
     IOutboxService outboxService,
     IJsonSerializerOptionsProvider jsonOptionsProvider,
-    IPublishEndpoint publishEndpoint,
+    IPublishEndpointFacade publishEndpointFacade,
     ILogger<OutboxProcessorJob> logger)
 {
     public async Task ExecuteAsync()
@@ -39,7 +37,7 @@ internal sealed class OutboxProcessorJob(
                     await outboxService.MarkAsFailedAsync(
                         message.OutboxMessageId,
                         $"Could not resolve event type: {message.EventType}");
-                    await unitOfWork.SaveChangesAsync();
+
                     continue;
                 }
 
@@ -53,15 +51,14 @@ internal sealed class OutboxProcessorJob(
                     await outboxService.MarkAsFailedAsync(
                         message.OutboxMessageId,
                         "Failed to deserialize event data");
-                    await unitOfWork.SaveChangesAsync();
+
                     continue;
                 }
 
                 // Publish to RabbitMQ via MassTransit
-                await publishEndpoint.Publish(domainEvent, eventType);
+                await publishEndpointFacade.Publish(domainEvent, eventType);
 
                 await outboxService.MarkAsPublishedAsync(message.OutboxMessageId);
-                await unitOfWork.SaveChangesAsync();
 
                 logger.LogInformation(
                     "Published event {EventType} with ID {MessageId} to RabbitMQ",
@@ -77,7 +74,6 @@ internal sealed class OutboxProcessorJob(
                     message.MessageId);
 
                 await outboxService.MarkAsFailedAsync(message.OutboxMessageId, ex.Message);
-                await unitOfWork.SaveChangesAsync();
             }
         }
 
