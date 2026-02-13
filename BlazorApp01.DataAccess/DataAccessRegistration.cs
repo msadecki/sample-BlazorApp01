@@ -26,6 +26,9 @@ public static class DataAccessRegistration
             }
         });
 
+        // Register repository factory as singleton (stateless)
+        services.AddSingleton<IRepositoryFactory, RepositoryFactory>();
+
         // Register Unit of Work with Scoped lifetime for Blazor
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

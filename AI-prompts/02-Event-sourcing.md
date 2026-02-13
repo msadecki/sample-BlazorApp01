@@ -2049,3 +2049,29 @@ Absolutely! Using an enum is a much better choice for OutboxMessageStatus. Here'
 Updated OutboxMessage with Enum
 ...
 --------
+Help me to remove CustomTasksRepository and ApplicationUsersRepository from IUnitOfWork. I'd like to use Repository<TEntity>() method.
+--------
+...
+--------
+I think I should be safet to use ConcurrentDictionary in UnitOfWork for _repositories.
+--------
+You're absolutely right! Since IUnitOfWork is registered as Scoped in your Blazor Server application, and Blazor Server can have multiple async operations happening concurrently within the same scope (due to SignalR/WebSocket connections and user interactions), using ConcurrentDictionary is a safer choice to prevent potential race conditions.
+Updated UnitOfWork with ConcurrentDictionary
+...
+--------
+I prefer to exctract factory and inject abstraction (its interface) instead of new Repository<TEntity>(_context) in UnitOfWork.
+--------
+Excellent architectural decision! Using a factory pattern with dependency injection will make your code more testable, flexible, and maintainable. Let me create a proper factory abstraction for repository creation.
+Perfect! I can see you already have the IRepository base interface. Now let me create a complete repository factory solution:
+1. Create Repository Factory Interface and Implementation
+...
+--------
+In AddRandomCustomTaskCommandHandler I'd like to use CreateCustomTaskCommand to create task to be sure to publish domain event.
+I'd like to use ISenderFacade to handle command.
+--------
+Excellent idea! This follows the DRY principle and ensures consistency in how tasks are created and domain events are published. Let me help you refactor AddRandomCustomTaskCommandHandler to use CreateCustomTaskCommand.
+Perfect! Now let me refactor AddRandomCustomTaskCommandHandler to use CreateCustomTaskCommand:
+Updated AddRandomCustomTaskCommand
+...
+Perfect! Let's refactor AddRandomCustomTaskCommandHandler to use ISenderFacade to delegate to CreateCustomTaskCommand. This ensures all validation, logging, and event publishing happen consistently.
+--------

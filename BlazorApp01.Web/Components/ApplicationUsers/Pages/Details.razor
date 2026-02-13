@@ -123,7 +123,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        applicationUser = await UnitOfWork.ApplicationUsersRepository.FirstOrDefaultAsync(
+        applicationUser = await UnitOfWork.Repository<ApplicationUser>().FirstOrDefaultAsync(
             u => u.Id == UserId);
 
         if (applicationUser is null)

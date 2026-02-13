@@ -1,14 +1,13 @@
 ﻿using Ardalis.Result;
-using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Domain.Enums;
-using BlazorApp01.Domain.Models;
+using BlazorApp01.Features.CQRS.MediatorFacade;
 using BlazorApp01.Features.CQRS.MediatorFacade.Abstractions;
 
 namespace BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands;
 
-public sealed record class AddRandomCustomTaskCommand : ICommand<int>;
+public sealed record AddRandomCustomTaskCommand : ICommand<int>;
 
-internal sealed class AddRandomCustomTaskCommandHandler(IUnitOfWork unitOfWork) : ICommandHandler<AddRandomCustomTaskCommand, int>
+internal sealed class AddRandomCustomTaskCommandHandler(ISenderFacade senderFacade) : ICommandHandler<AddRandomCustomTaskCommand, int>
 {
     private static readonly string[] TaskDescriptions =
     [
@@ -31,19 +30,15 @@ internal sealed class AddRandomCustomTaskCommandHandler(IUnitOfWork unitOfWork) 
         var statuses = Enum.GetValues<CustomTaskStatus>();
         var randomStatus = statuses[random.Next(statuses.Length)];
 
-        var customTask = new CustomTask
-        {
-            Description = TaskDescriptions[random.Next(TaskDescriptions.Length)],
-            Status = randomStatus,
-            CreatedAt = now,
-            DueDate = DateOnly.FromDateTime(now.AddDays(random.Next(1, 30))),
-            CompletionDate = randomStatus == CustomTaskStatus.Completed ? now : null,
-            IsActive = true
-        };
+        var createCommand = new CreateCustomTaskCommand(
+            Description: TaskDescriptions[random.Next(TaskDescriptions.Length)],
+            Status: randomStatus,
+            CreatedAt: now,
+            DueDate: DateOnly.FromDateTime(now.AddDays(random.Next(1, 30))),
+            CompletionDate: randomStatus == CustomTaskStatus.Completed ? now : null,
+            IsActive: true
+        );
 
-        await unitOfWork.CustomTasksRepository.AddAsync(customTask, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return customTask.CustomTaskId;
+        return await senderFacade.SendAsync(createCommand, cancellationToken);
     }
 }

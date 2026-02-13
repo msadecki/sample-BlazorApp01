@@ -5,7 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BlazorApp01.DataAccess.Repositories;
 
-public interface IRepository<TEntity> where TEntity : class, IEntity
+public interface IRepository
+{ }
+
+public interface IRepository<TEntity> : IRepository
+    where TEntity : class, IEntity
 {
     IQueryable<TEntity> QueryAsNoTracking();
     IQueryable<TEntity> Query();

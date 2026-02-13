@@ -1,6 +1,7 @@
 using Ardalis.Result;
 using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Domain.Enums;
+using BlazorApp01.Domain.Models;
 using BlazorApp01.Features.CQRS.MediatorFacade.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,7 @@ internal sealed class UpdateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
 {
     public async ValueTask<Result<bool>> Handle(UpdateCustomTaskCommand command, CancellationToken cancellationToken)
     {
-        var customTask = await unitOfWork.CustomTasksRepository
+        var customTask = await unitOfWork.Repository<CustomTask>()
             .Query()
             .FirstOrDefaultAsync(x => x.CustomTaskId == command.CustomTaskId, cancellationToken);
 
@@ -38,7 +39,7 @@ internal sealed class UpdateCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
         customTask.IsActive = command.IsActive;
         customTask.RowVersion = command.RowVersion;
 
-        unitOfWork.CustomTasksRepository.Update(customTask);
+        unitOfWork.Repository<CustomTask>().Update(customTask);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;

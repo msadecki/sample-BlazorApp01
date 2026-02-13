@@ -1,5 +1,6 @@
 using Ardalis.Result;
 using BlazorApp01.DataAccess.Repositories;
+using BlazorApp01.Domain.Models;
 using BlazorApp01.Features.CQRS.MediatorFacade.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +12,7 @@ internal sealed class DeleteCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
 {
     public async ValueTask<Result<bool>> Handle(DeleteCustomTaskCommand command, CancellationToken cancellationToken)
     {
-        var customTask = await unitOfWork.CustomTasksRepository
+        var customTask = await unitOfWork.Repository<CustomTask>()
             .Query()
             .FirstOrDefaultAsync(x => x.CustomTaskId == command.CustomTaskId, cancellationToken);
 
@@ -20,7 +21,7 @@ internal sealed class DeleteCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
             return false;
         }
 
-        unitOfWork.CustomTasksRepository.Remove(customTask);
+        unitOfWork.Repository<CustomTask>().Remove(customTask);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;

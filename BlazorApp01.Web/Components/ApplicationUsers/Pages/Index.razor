@@ -40,7 +40,7 @@
     {
         applicationUsersProvider = async request =>
         {
-            var query = UnitOfWork.ApplicationUsersRepository.QueryAsNoTracking();
+            var query = UnitOfWork.Repository<ApplicationUser>().QueryAsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(emailFilter))
             {
