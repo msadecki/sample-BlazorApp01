@@ -22,6 +22,8 @@ graph TD
     
     Features --> DataAccess
     
+    DataAccess --> Domain
+    
     Messaging --> Domain
     
     UnitTests -.-> Features
