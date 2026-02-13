@@ -4,6 +4,7 @@
 @using BlazorApp01.Features.CQRS.MediatorFacade
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@using BlazorApp01.Features.Extensions
 @using BlazorApp01.Web.Services
 @inject ISenderFacade Sender
 @inject NavigationManager NavigationManager
@@ -87,7 +88,7 @@
         }
         else
         {
-            errorMessage = "Failed to load task: " + string.Join(", ", result.Errors);
+            errorMessage = "Failed to load task: " + string.Join(", ", result.MergedErrors());
         }
 
         isLoading = false;

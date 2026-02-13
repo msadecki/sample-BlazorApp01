@@ -5,6 +5,7 @@
 @using BlazorApp01.Features.CQRS.MediatorFacade
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Queries
+@using BlazorApp01.Features.Extensions
 @using BlazorApp01.Web.Services
 @inject ISenderFacade Sender
 @inject NavigationManager NavigationManager
@@ -115,7 +116,7 @@ else
         }
         else
         {
-            errorMessage = "Failed to load task: " + string.Join(", ", result.Errors);
+            errorMessage = "Failed to load task: " + string.Join(", ", result.MergedErrors());
         }
 
         isLoading = false;
@@ -136,7 +137,7 @@ else
             Description: customTask.Description,
             Status: customTask.Status,
             DueDate: customTask.DueDate,
-            CompletionDate: customTask.CompletionDate,
+            CompletionDate: customTask.CompletionDate ?? DateTime.UtcNow,
             IsActive: customTask.IsActive,
             RowVersion: customTask.RowVersion
         );
@@ -149,7 +150,7 @@ else
         }
         else
         {
-            errorMessage = "Failed to update task: " + string.Join(", ", result.Errors);
+            errorMessage = "Failed to update task: " + string.Join(", ", result.MergedErrors());
             isSubmitting = false;
         }
     }
