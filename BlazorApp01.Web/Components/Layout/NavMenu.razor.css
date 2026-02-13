@@ -143,3 +143,25 @@
         overflow-y: auto;
     }
 }
+
+.user-name-ellipsis {
+    display: inline-block;
+    max-width: 140px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+@media (min-width: 641px) {
+    .user-name-ellipsis {
+        max-width: 140px;
+    }
+}
+
+@media (max-width: 640.98px) {
+    .user-name-ellipsis {
+        max-width: calc(100vw - 8rem);
+    }
+}
