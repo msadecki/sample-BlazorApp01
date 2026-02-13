@@ -1,0 +1,13 @@
+﻿::deep tr {
+    height: 3em;
+}
+
+    ::deep tr > td {
+        vertical-align: middle;
+    }
+
+/* Hide rows where all TDs are empty */
+::deep tbody tr:empty,
+::deep tbody tr:has(td):not(:has(td:not(:empty))) {
+    display: none;
+}
