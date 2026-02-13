@@ -67,27 +67,57 @@ public static class DataAccessRegistration
                 return;
             }
 
-            var customTasks = new[]
+            var random = new Random(42); // Fixed seed for consistent data
+            var customTasks = new List<CustomTask>();
+            var baseDate = DateTime.UtcNow;
+
+            var taskDescriptions = new[]
             {
-                new CustomTask
-                {
-                    Description = "Task 1",
-                    Status = CustomTaskStatus.Pending,
-                    CreatedAt = DateTime.UtcNow,
-                    DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
-                    CompletionDate = null,
-                    IsActive = true
-                },
-                new CustomTask
-                {
-                    Description = "Task 2",
-                    Status = CustomTaskStatus.InProgress,
-                    CreatedAt = DateTime.UtcNow,
-                    DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)),
-                    CompletionDate = null,
-                    IsActive = true
-                }
+                "Review code changes", "Update documentation", "Fix bug in login", "Implement new feature",
+                "Refactor database queries", "Write unit tests", "Deploy to staging", "Update dependencies",
+                "Review pull requests", "Optimize performance", "Create API endpoints", "Design UI mockups",
+                "Configure CI/CD pipeline", "Update user manual", "Analyze system logs", "Backup database",
+                "Security audit", "Client meeting preparation", "Sprint planning", "Code review session",
+                "Update project roadmap", "Research new technologies", "Implement authentication", "Add validation rules",
+                "Create migration scripts", "Test new features", "Monitor application health", "Update API documentation",
+                "Refactor legacy code", "Implement caching strategy", "Configure load balancer", "Database optimization",
+                "Write integration tests", "Update error handling", "Implement logging", "Design database schema",
+                "Setup monitoring alerts", "Create deployment scripts", "Review security policies", "Update coding standards"
             };
+
+            var statuses = Enum.GetValues<CustomTaskStatus>();
+
+            for (int i = 1; i <= 100; i++)
+            {
+                var status = statuses[random.Next(statuses.Length)];
+                var daysOffset = random.Next(-30, 60); // Tasks from 30 days ago to 60 days in the future
+                var createdDaysAgo = random.Next(1, 90);
+                var createdDate = baseDate.AddDays(-createdDaysAgo);
+                
+                var description = i <= taskDescriptions.Length 
+                    ? taskDescriptions[i - 1] 
+                    : $"{taskDescriptions[random.Next(taskDescriptions.Length)]} #{i}";
+
+                DateTime? completionDate = null;
+                if (status == CustomTaskStatus.Completed)
+                {
+                    // Completion date must be between creation date and now
+                    var daysAfterCreation = random.Next(0, Math.Max(1, (int)(baseDate - createdDate).TotalDays + 1));
+                    completionDate = createdDate.AddDays(daysAfterCreation);
+                }
+
+                var task = new CustomTask
+                {
+                    Description = description,
+                    Status = status,
+                    CreatedAt = createdDate,
+                    DueDate = DateOnly.FromDateTime(baseDate.AddDays(daysOffset)),
+                    CompletionDate = completionDate,
+                    IsActive = random.Next(100) < 95 // 95% active, 5% inactive
+                };
+
+                customTasks.Add(task);
+            }
 
             context.CustomTasks.AddRange(customTasks);
             context.SaveChanges();
