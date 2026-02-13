@@ -1,136 +1,117 @@
 ﻿@page "/customtasks/create"
 @rendermode InteractiveServer
-@using BlazorApp01.Domain.Enums
-@using BlazorApp01.Domain.Models
 @using BlazorApp01.Features.CQRS.MediatorFacade
 @using BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands
+@using BlazorApp01.Domain.Enums
+@using Ardalis.Result
 @inject ISenderFacade Sender
 @inject NavigationManager NavigationManager
 
-<PageTitle>Create</PageTitle>
+<PageTitle>Create Custom Task</PageTitle>
 
-<h1>Create</h1>
+<h3>Create New Task</h3>
 
-<h4>CustomTask</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="CustomTask" OnValidSubmit="CreateCustomTask" FormName="create">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" />
-            <div class="form-group">
-                <span class="text-danger">*</span>
-                <label for="Description" class="control-label">Description</label>
-                <InputText id="Description" @bind-Value="CustomTask.Description" class="form-control" />
-                <ValidationMessage For="() => CustomTask.Description" class="text-danger" />
-            </div>
-            <div class="form-group">
-                <label for="Status" class="control-label">Status</label>
-                <InputSelect id="Status" @bind-Value="CustomTask.Status" class="form-control">
-                    @foreach (var status in Enum.GetValues<CustomTaskStatus>())
-                    {
-                        <option value="@status">@status</option>
-                    }
-                </InputSelect>
-                <ValidationMessage For="() => CustomTask.Status" class="text-danger" />
-            </div>
-            <div class="form-group">
-                <label for="CreatedAt" class="control-label">CreatedAt</label>
-                <InputDate Type="InputDateType.DateTimeLocal" id="CreatedAt" @bind-Value="CustomTask.CreatedAt" class="form-control" />
-                <ValidationMessage For="() => CustomTask.CreatedAt" class="text-danger" />
-            </div>
-            <div class="form-group">
-                <label for="DueDate" class="control-label">DueDate</label>
-                <InputDate id="DueDate" @bind-Value="CustomTask.DueDate" class="form-control" />
-                <ValidationMessage For="() => CustomTask.DueDate" class="text-danger" />
-            </div>
-            <div class="form-group">
-                <label for="CompletionDate" class="control-label">CompletionDate</label>
-                <InputDate Type="InputDateType.DateTimeLocal" id="CompletionDate" @bind-Value="CustomTask.CompletionDate" class="form-control" />
-                <ValidationMessage For="() => CustomTask.CompletionDate" class="text-danger" />
-            </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <InputCheckbox id="IsActive" @bind-Value="CustomTask.IsActive" class="form-check-input" />
-                    IsActive
-                </label>
-            </div>
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-danger mt-3">@errorMessage</div>
-            }
-            <div class="form-group mt-3">
-                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                    @(isSubmitting ? "Creating..." : "Create")
-                </button>
-            </div>
-        </EditForm>
+<EditForm Model="@formModel" OnValidSubmit="HandleSubmit">
+    @if (validationErrors.Count > 0)
+    {
+        <div class="alert alert-danger">
+            <h5>Validation Errors:</h5>
+            <ul>
+                @foreach (var error in validationErrors)
+                {
+                    <li><strong>@error.Identifier:</strong> @error.ErrorMessage</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <InputText @bind-Value="formModel.Description" class="form-control" />
     </div>
-</div>
 
-<div>
-    <a href="/customtasks">Back to List</a>
-</div>
+    <div class="mb-3">
+        <label class="form-label">Status</label>
+        <InputSelect @bind-Value="formModel.Status" class="form-control">
+            @foreach (var status in Enum.GetValues<CustomTaskStatus>())
+            {
+                <option value="@status">@status</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Due Date</label>
+        <InputDate @bind-Value="formModel.DueDate" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Is Active</label>
+        <InputCheckbox @bind-Value="formModel.IsActive" class="form-check-input" />
+    </div>
+
+    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+        @(isSubmitting ? "Creating..." : "Create")
+    </button>
+    <a href="/customtasks" class="btn btn-secondary">Cancel</a>
+</EditForm>
 
 @code {
-    [SupplyParameterFromForm]
-    private CustomTaskModel CustomTask { get; set; } = new();
-
-    private bool isSubmitting = false;
-    private string errorMessage = string.Empty;
-
-    protected override void OnInitialized()
+    private CreateCustomTaskFormModel formModel = new()
     {
-        CustomTask.CreatedAt = DateTime.Now;
-        CustomTask.DueDate = DateOnly.FromDateTime(DateTime.Now.AddDays(7));
-        CustomTask.Status = CustomTaskStatus.Pending;
-        CustomTask.IsActive = true;
-    }
+        Description = string.Empty,
+        Status = CustomTaskStatus.Pending,
+        DueDate = DateOnly.FromDateTime(DateTime.Today.AddDays(7)),
+        IsActive = true
+    };
 
-    private async Task CreateCustomTask()
+    private bool isSubmitting;
+    private List<ValidationError> validationErrors = new();
+
+    private async Task HandleSubmit()
     {
         isSubmitting = true;
-        errorMessage = string.Empty;
+        validationErrors.Clear();
 
-        try
-        {
-            var command = new CreateCustomTaskCommand(
-                Description: CustomTask.Description,
-                Status: CustomTask.Status,
-                CreatedAt: CustomTask.CreatedAt,
-                DueDate: CustomTask.DueDate,
-                CompletionDate: CustomTask.CompletionDate,
-                IsActive: CustomTask.IsActive
-            );
+        // Map form model to command (immutable record)
+        var command = new CreateCustomTaskCommand(
+            Description: formModel.Description,
+            Status: formModel.Status,
+            CreatedAt: DateTime.UtcNow,
+            DueDate: formModel.DueDate,
+            CompletionDate: formModel.Status == CustomTaskStatus.Completed ? DateTime.UtcNow : null,
+            IsActive: formModel.IsActive
+        );
 
-            var result = await Sender.SendAsync(command);
+        var result = await Sender.SendAsync(command);
 
-            if (result.IsSuccess)
-            {
-                NavigationManager.NavigateTo("/customtasks");
-            }
-            else
-            {
-                errorMessage = "Failed to create custom task. Please try again.";
-            }
-        }
-        catch (Exception ex)
+        if (result.IsSuccess)
         {
-            errorMessage = $"An error occurred: {ex.Message}";
+            NavigationManager.NavigateTo("/customtasks");
         }
-        finally
+        else if (result.Status == ResultStatus.Invalid)
         {
-            isSubmitting = false;
+            // Validation errors are automatically captured by ValidationBehavior
+            validationErrors = result.ValidationErrors.ToList();
         }
+        else
+        {
+            validationErrors.Add(new ValidationError(
+                identifier: "General",
+                errorMessage: string.Join(", ", result.Errors),
+                errorCode: string.Empty,
+                severity: ValidationSeverity.Error));
+        }
+
+        isSubmitting = false;
     }
 
-    private sealed class CustomTaskModel
+    // Mutable form model for Blazor data binding
+    private sealed class CreateCustomTaskFormModel
     {
         public string Description { get; set; } = string.Empty;
         public CustomTaskStatus Status { get; set; }
-        public DateTime CreatedAt { get; set; }
         public DateOnly DueDate { get; set; }
-        public DateTime? CompletionDate { get; set; }
         public bool IsActive { get; set; }
     }
 }

@@ -1,4 +1,6 @@
-﻿using BlazorApp01.Features.CQRS.MediatorFacade;
+﻿using BlazorApp01.Features.CQRS.Behaviors;
+using BlazorApp01.Features.CQRS.MediatorFacade;
+using FluentValidation;
 using Mediator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,9 +11,18 @@ public static class FeaturesRegistration
 {
     public static IServiceCollection RegisterFeatures(this IServiceCollection services, IConfiguration configuration)
     {
+        AddValidation(services);
         AddMediator(services);
 
         return services;
+    }
+
+    private static void AddValidation(IServiceCollection services)
+    {
+        // Register all validators from this assembly
+        services.AddValidatorsFromAssembly(
+            typeof(FeaturesRegistration).Assembly,
+            includeInternalTypes: true);
     }
 
     private static void AddMediator(IServiceCollection services)
@@ -20,14 +31,17 @@ public static class FeaturesRegistration
         {
             options.Namespace = "BlazorApp01.Features.Mediator";
             options.ServiceLifetime = ServiceLifetime.Scoped;
-            // Only available from v3:
             options.GenerateTypesAsInternal = true;
             options.NotificationPublisherType = typeof(ForeachAwaitPublisher);
             options.Assemblies = [typeof(FeaturesRegistration).Assembly];
-            options.PipelineBehaviors = [];
+            
+            // 🔥 Register validation pipeline behavior
+            options.PipelineBehaviors = 
+            [
+                typeof(ValidationBehavior<,>)
+            ];
+            
             options.StreamPipelineBehaviors = [];
-            // Only available from v3.1:
-            //options..CachingMode = CachingMode.Eager;
         });
 
         services.AddScoped<ISenderFacade, SenderFacade>();

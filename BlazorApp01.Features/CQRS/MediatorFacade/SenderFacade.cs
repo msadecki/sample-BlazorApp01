@@ -16,17 +16,17 @@ internal sealed class SenderFacade(ISender sender, ILogger<SenderFacade> logger)
 {
     public async ValueTask<Result<TResponse>> SendAsync<TResponse>(Abstractions.ICommand<TResponse> request, CancellationToken cancellationToken = default)
     {
-        return await BaseSendAsync<Result<TResponse>>(request, cancellationToken);
+        return await BaseSendAsync(request, cancellationToken);
     }
 
     public async ValueTask<Result> SendAsync(Abstractions.ICommand request, CancellationToken cancellationToken = default)
     {
-        return await BaseSendAsync<Result>(request, cancellationToken);
+        return await BaseSendAsync(request, cancellationToken);
     }
 
     public async ValueTask<Result<TResponse>> SendAsync<TResponse>(Abstractions.IQuery<TResponse> request, CancellationToken cancellationToken = default)
     {
-        return await BaseSendAsync<Result<TResponse>>(request, cancellationToken);
+        return await BaseSendAsync(request, cancellationToken);
     }
 
     private async ValueTask<TResult> BaseSendAsync<TResult>(IRequest<TResult> request, CancellationToken cancellationToken = default)
