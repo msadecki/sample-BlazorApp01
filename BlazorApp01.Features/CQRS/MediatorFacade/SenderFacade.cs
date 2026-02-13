@@ -3,7 +3,7 @@ using BlazorApp01.Features.Extensions;
 using Mediator;
 using Microsoft.Extensions.Logging;
 
-namespace BlazorApp01.Features.Facade.CQRSMediator;
+namespace BlazorApp01.Features.CQRS.MediatorFacade;
 
 public interface ISenderFacade
 {

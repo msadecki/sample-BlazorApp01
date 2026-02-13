@@ -1,10 +1,10 @@
 using Ardalis.Result;
-using BlazorApp01.Features.Facade.CQRSMediator;
-using BlazorApp01.Features.Facade.CQRSMediator.Abstractions;
+using BlazorApp01.Features.CQRS.MediatorFacade;
+using BlazorApp01.Features.CQRS.MediatorFacade.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace BlazorApp01.UnitTests.Features.Facade.CQRSMediator;
+namespace BlazorApp01.UnitTests.Features.CQRS.MediatorFacade;
 
 public sealed class SenderFacadeTests
 {

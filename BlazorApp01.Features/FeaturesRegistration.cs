@@ -1,4 +1,4 @@
-﻿using BlazorApp01.Features.Facade.CQRSMediator;
+﻿using BlazorApp01.Features.CQRS.MediatorFacade;
 using Mediator;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
