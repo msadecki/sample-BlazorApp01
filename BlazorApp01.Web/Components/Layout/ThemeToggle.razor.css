@@ -11,14 +11,20 @@
     background: none;
     cursor: pointer;
     transition: transform 0.2s ease;
+    text-decoration: none !important;
 }
 
 .theme-toggle-btn:hover {
     transform: scale(1.1);
-    text-decoration: none;
+    text-decoration: none !important;
 }
 
 .theme-toggle-btn:focus {
     outline: none;
     box-shadow: none;
+    text-decoration: none !important;
+}
+
+.theme-toggle-btn:active {
+    text-decoration: none !important;
 }
