@@ -1,8 +1,8 @@
 ﻿@page "/customtasks/create"
-@using Microsoft.EntityFrameworkCore
 @using BlazorApp01.Domain.Models
 @using BlazorApp01.Domain.Enums
-@inject IDbContextFactory<BlazorApp01.DataAccess.Contexts.AppDbContext> DbFactory
+@using BlazorApp01.DataAccess.Repositories
+@inject IUnitOfWork UnitOfWork
 @inject NavigationManager NavigationManager
 
 <PageTitle>Create</PageTitle>
@@ -76,9 +76,8 @@
     // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks
     private async Task AddCustomTask()
     {
-        using var context = DbFactory.CreateDbContext();
-        context.CustomTasks.Add(CustomTask);
-        await context.SaveChangesAsync();
+        await UnitOfWork.CustomTasksRepository.AddAsync(CustomTask);
+        await UnitOfWork.SaveChangesAsync();
         NavigationManager.NavigateTo("/customtasks");
     }
 }

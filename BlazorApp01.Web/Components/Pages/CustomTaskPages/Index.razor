@@ -3,9 +3,8 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using BlazorApp01.Domain.Models
-@using BlazorApp01.DataAccess.Contexts
-@implements IAsyncDisposable
-@inject IDbContextFactory<BlazorApp01.DataAccess.Contexts.AppDbContext> DbFactory
+@using BlazorApp01.DataAccess.Repositories
+@inject IUnitOfWork UnitOfWork
 
 <PageTitle>Index</PageTitle>
 
@@ -47,13 +46,11 @@
     {
         customTasksProvider = async request =>
         {
-            using var context = DbFactory.CreateDbContext();
-
-            var query = context.CustomTasks.AsNoTracking();
+            var query = UnitOfWork.CustomTasksRepository.QueryAsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(descriptionFilter))
             {
-                query = query.Where(customTask => customTask.Description!.Contains(descriptionFilter));
+                query = query.Where(customTask => customTask.Description.Contains(descriptionFilter));
             }
 
             var totalItemCount = await query.CountAsync(request.CancellationToken);
@@ -71,7 +68,4 @@
     {
         await pagination.SetCurrentPageIndexAsync(0);
     }
-
-    public async ValueTask DisposeAsync()
-    { }
 }

@@ -2,7 +2,8 @@
 @using Microsoft.EntityFrameworkCore
 @using BlazorApp01.Domain.Models
 @using BlazorApp01.Domain.Enums
-@inject IDbContextFactory<BlazorApp01.DataAccess.Contexts.AppDbContext> DbFactory
+@using BlazorApp01.DataAccess.Repositories
+@inject IUnitOfWork UnitOfWork
 @inject NavigationManager NavigationManager
 
 <PageTitle>Edit</PageTitle>
@@ -78,8 +79,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        CustomTask ??= await context.CustomTasks.FirstOrDefaultAsync(m => m.CustomTaskId == CustomTaskId);
+        CustomTask ??= await UnitOfWork.CustomTasksRepository.GetByIdAsync(CustomTaskId);
 
         if (CustomTask is null)
         {
@@ -91,16 +91,15 @@ else
     // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task UpdateCustomTask()
     {
-        using var context = DbFactory.CreateDbContext();
-        context.Attach(CustomTask!).State = EntityState.Modified;
+        UnitOfWork.CustomTasksRepository.Update(CustomTask!);
 
         try
         {
-            await context.SaveChangesAsync();
+            await UnitOfWork.SaveChangesAsync();
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (!CustomTaskExists(CustomTask!.CustomTaskId))
+            if (!await CustomTaskExists(CustomTask!.CustomTaskId))
             {
                 NavigationManager.NotFound();
             }
@@ -113,9 +112,8 @@ else
         NavigationManager.NavigateTo("/customtasks");
     }
 
-    private bool CustomTaskExists(int customtaskid)
+    private async Task<bool> CustomTaskExists(int customtaskid)
     {
-        using var context = DbFactory.CreateDbContext();
-        return context.CustomTasks.Any(e => e.CustomTaskId == customtaskid);
+        return await UnitOfWork.CustomTasksRepository.AnyAsync(customTask => customTask.CustomTaskId == customtaskid);
     }
 }

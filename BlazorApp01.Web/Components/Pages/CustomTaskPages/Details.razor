@@ -1,7 +1,7 @@
 ﻿@page "/customtasks/details"
-@using Microsoft.EntityFrameworkCore
 @using BlazorApp01.Domain.Models
-@inject IDbContextFactory<BlazorApp01.DataAccess.Contexts.AppDbContext> DbFactory
+@using BlazorApp01.DataAccess.Repositories
+@inject IUnitOfWork UnitOfWork
 @inject NavigationManager NavigationManager
 
 <PageTitle>Details</PageTitle>
@@ -47,8 +47,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
-        customtask = await context.CustomTasks.FirstOrDefaultAsync(m => m.CustomTaskId == CustomTaskId);
+        customtask = await UnitOfWork.CustomTasksRepository.GetByIdAsync(CustomTaskId);
 
         if (customtask is null)
         {

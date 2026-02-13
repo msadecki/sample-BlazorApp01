@@ -7,9 +7,12 @@ namespace BlazorApp01.DataAccess.Repositories;
 
 public interface IRepository<TEntity> where TEntity : class, IEntity
 {
+    IQueryable<TEntity> QueryAsNoTracking();
+    IQueryable<TEntity> Query();
+
     Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default);
-    Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
     Task<int> CountAsync(Expression<Func<TEntity, bool>>? predicate = null, CancellationToken cancellationToken = default);
@@ -35,17 +38,27 @@ internal class Repository<TEntity> : IRepository<TEntity> where TEntity : class,
         DbSet = context.Set<TEntity>();
     }
 
+    public virtual IQueryable<TEntity> QueryAsNoTracking()
+    {
+        return DbSet.AsNoTracking();
+    }
+
+    public virtual IQueryable<TEntity> Query()
+    {
+        return DbSet;
+    }
+
     public virtual async Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
     {
         return await DbSet.FindAsync(new[] { id }, cancellationToken);
     }
 
-    public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await DbSet.ToListAsync(cancellationToken);
     }
 
-    public virtual async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+    public virtual async Task<IReadOnlyList<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
     {
         return await DbSet.Where(predicate).ToListAsync(cancellationToken);
     }

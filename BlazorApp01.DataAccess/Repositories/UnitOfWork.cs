@@ -5,14 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BlazorApp01.DataAccess.Repositories;
 
+// KH: https://learn.microsoft.com/en-us/aspnet/mvc/overview/older-versions/getting-started-with-ef-5-using-mvc-4/implementing-the-repository-and-unit-of-work-patterns-in-an-asp-net-mvc-application
+// Add repositories for other entities as needed
 public interface IUnitOfWork : IDisposable, IAsyncDisposable
 {
     IRepository<CustomTask> CustomTasksRepository { get; }
 
     IRepository<ApplicationUser> ApplicationUsersRepository { get; }
-
-    // Add repositories for other entities as needed
-    // ...
 
     IRepository<TEntity> Repository<TEntity>() where TEntity : class, IEntity;
 
