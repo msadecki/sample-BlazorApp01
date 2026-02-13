@@ -1,0 +1,25 @@
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<span>@timeZoneText</span>
+
+@code {
+    private string timeZoneText = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var timeZoneId = await JSRuntime.InvokeAsync<string>("eval", "Intl.DateTimeFormat().resolvedOptions().timeZone");
+                timeZoneText = $"- Time Zone {timeZoneId}";
+                StateHasChanged();
+            }
+            catch (Exception)
+            {
+                // JS not available yet, leave empty
+            }
+        }
+    }
+}
