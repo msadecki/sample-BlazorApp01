@@ -13,19 +13,19 @@ main {
 }
 
 .top-row {
-    background-color: var(--bg-secondary, #f7f7f7);
+    background-color: var(--bs-secondary-bg);
     justify-content: flex-end;
     height: 3.5rem;
     display: flex;
     align-items: center;
-    color: var(--text-primary, #212529);
+    color: var(--bs-body-color);
 }
 
     .top-row ::deep a, .top-row ::deep .btn-link {
         white-space: nowrap;
         margin-left: 1.5rem;
         text-decoration: none;
-        color: var(--link-color, #006bb7);
+        color: var(--bs-link-color);
     }
 
     .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
