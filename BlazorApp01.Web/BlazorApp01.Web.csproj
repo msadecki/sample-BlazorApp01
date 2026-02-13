@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BlazorApp01.DataAccess\BlazorApp01.DataAccess.csproj" />
+    <ProjectReference Include="..\BlazorApp01.Features\BlazorApp01.Features.csproj" />
   </ItemGroup>
 
 </Project>

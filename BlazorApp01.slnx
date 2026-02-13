@@ -4,5 +4,6 @@
   </Folder>
   <Project Path="BlazorApp01.DataAccess/BlazorApp01.DataAccess.csproj" />
   <Project Path="BlazorApp01.Domain/BlazorApp01.Domain.csproj" />
+  <Project Path="BlazorApp01.Features/BlazorApp01.Features.csproj" Id="88577bbb-18c5-47bb-a670-5043c71fb2fe" />
   <Project Path="BlazorApp01.Web/BlazorApp01.Web.csproj" />
 </Solution>

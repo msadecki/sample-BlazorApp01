@@ -1,6 +1,7 @@
 ﻿using BlazorApp01.DataAccess;
 using BlazorApp01.DataAccess.Contexts;
 using BlazorApp01.Domain.Models;
+using BlazorApp01.Features;
 using BlazorApp01.Web.Components;
 using BlazorApp01.Web.Components.Account;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -14,6 +15,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.RegisterDataAccess(builder.Configuration);
+builder.Services.RegisterFeatures(builder.Configuration);
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
