@@ -1,8 +1,10 @@
-﻿using BlazorApp01.DataAccess;
+﻿using BlazorApp01.BackgroundProcessing;
+using BlazorApp01.DataAccess;
 using BlazorApp01.Features;
 using BlazorApp01.Web;
 using BlazorApp01.Web.Components;
 using BlazorApp01.Web.Components.Account;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,11 +14,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.RegisterDataAccess(builder.Configuration);
 builder.Services.RegisterFeatures(builder.Configuration);
+builder.Services.RegisterBackgroundProcessing(builder.Configuration);
 builder.Services.RegisterWeb(builder.Configuration);
 
 var app = builder.Build();
 
 app.Services.MigrateAndSeedDatabase();
+
+// Register cron jobs and add Hangfire dashboard (UI at {baseUrl}/hangfire).
+app.Services.AddCronJobs();
+app.UseHangfireDashboard();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

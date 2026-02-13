@@ -2,6 +2,7 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
   </Folder>
+  <Project Path="BlazorApp01.BackgroundProcessing/BlazorApp01.BackgroundProcessing.csproj" Id="1cf05601-3fa9-4130-8c0d-83784e505cd4" />
   <Project Path="BlazorApp01.DataAccess/BlazorApp01.DataAccess.csproj" />
   <Project Path="BlazorApp01.Domain/BlazorApp01.Domain.csproj" />
   <Project Path="BlazorApp01.Features/BlazorApp01.Features.csproj" Id="88577bbb-18c5-47bb-a670-5043c71fb2fe" />
