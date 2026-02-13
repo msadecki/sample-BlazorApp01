@@ -1,5 +1,6 @@
 ﻿@page "/weather"
-@attribute [StreamRendering]
+@using Microsoft.AspNetCore.Components.QuickGrid
+@rendermode InteractiveServer
 
 <PageTitle>Weather</PageTitle>
 
@@ -13,27 +14,12 @@
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th aria-label="Temperature in Celsius">Temp. (C)</th>
-                <th aria-label="Temperature in Fahrenheit">Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in forecasts)
-            {
-                <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <QuickGrid Class="table" Items="@forecasts.AsQueryable()">
+        <PropertyColumn Property="@(f => f.Date)" Format="d" Title="Date" Sortable="true" />
+        <PropertyColumn Property="@(f => f.TemperatureC)" Title="Temp. (C)" Sortable="true" />
+        <PropertyColumn Property="@(f => f.TemperatureF)" Title="Temp. (F)" Sortable="true" />
+        <PropertyColumn Property="@(f => f.Summary)" Title="Summary" Sortable="true" />
+    </QuickGrid>
 }
 
 @code {
