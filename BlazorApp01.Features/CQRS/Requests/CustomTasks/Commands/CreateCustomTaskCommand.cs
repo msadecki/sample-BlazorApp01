@@ -35,7 +35,7 @@ internal sealed class CreateCustomTaskCommandHandler(
             IsActive = request.IsActive
         };
 
-        await unitOfWork.Repository<CustomTask>().AddAsync(customTask, cancellationToken);
+        await unitOfWork.CommandRepository<CustomTask>().AddAsync(customTask, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Create domain event

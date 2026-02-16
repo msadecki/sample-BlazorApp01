@@ -24,7 +24,7 @@ internal sealed class GetCustomTasksPagedQueryHandler(IUnitOfWork unitOfWork) : 
 {
     public async ValueTask<Result<GetCustomTasksPagedResponse>> Handle(GetCustomTasksPagedQuery request, CancellationToken cancellationToken)
     {
-        var query = unitOfWork.Repository<CustomTask>().QueryAsNoTracking();
+        var query = unitOfWork.QueryRepository<CustomTask>().QueryAsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.DescriptionFilter))
         {

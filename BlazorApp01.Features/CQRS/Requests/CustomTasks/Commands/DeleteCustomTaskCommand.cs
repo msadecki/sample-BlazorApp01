@@ -11,7 +11,7 @@ internal sealed class DeleteCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
 {
     public async ValueTask<Result<bool>> Handle(DeleteCustomTaskCommand request, CancellationToken cancellationToken)
     {
-        var customTask = await unitOfWork.Repository<CustomTask>()
+        var customTask = await unitOfWork.CommandRepository<CustomTask>()
             .FindAsync(request.CustomTaskId, cancellationToken);
 
         if (customTask == null)
@@ -19,7 +19,7 @@ internal sealed class DeleteCustomTaskCommandHandler(IUnitOfWork unitOfWork) : I
             return false;
         }
 
-        unitOfWork.Repository<CustomTask>().Remove(customTask);
+        unitOfWork.CommandRepository<CustomTask>().Remove(customTask);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;

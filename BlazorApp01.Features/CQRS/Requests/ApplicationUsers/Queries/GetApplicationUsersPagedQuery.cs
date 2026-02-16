@@ -24,7 +24,7 @@ internal sealed class GetApplicationUsersPagedQueryHandler(IUnitOfWork unitOfWor
 {
     public async ValueTask<Result<GetApplicationUsersPagedResponse>> Handle(GetApplicationUsersPagedQuery request, CancellationToken cancellationToken)
     {
-        var query = unitOfWork.Repository<ApplicationUser>().QueryAsNoTracking();
+        var query = unitOfWork.QueryRepository<ApplicationUser>().QueryAsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.SearchFilter))
         {

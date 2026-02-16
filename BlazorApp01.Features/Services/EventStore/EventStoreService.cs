@@ -58,7 +58,7 @@ internal sealed class EventStoreService(
             StoredAt = DateTime.UtcNow
         };
 
-        await unitOfWork.Repository<StoredEvent>().AddAsync(storedEvent, cancellationToken);
+        await unitOfWork.CommandRepository<StoredEvent>().AddAsync(storedEvent, cancellationToken);
 
         return storedEvent;
     }
@@ -68,7 +68,7 @@ internal sealed class EventStoreService(
         string aggregateId,
         CancellationToken cancellationToken = default)
     {
-        return await unitOfWork.Repository<StoredEvent>()
+        return await unitOfWork.QueryRepository<StoredEvent>()
             .QueryAsNoTracking()
             .Where(storedEvent => storedEvent.AggregateType == aggregateType && storedEvent.AggregateId == aggregateId)
             .ToListAsync(cancellationToken);
@@ -80,7 +80,7 @@ internal sealed class EventStoreService(
         int fromVersion,
         CancellationToken cancellationToken = default)
     {
-        return await unitOfWork.Repository<StoredEvent>()
+        return await unitOfWork.QueryRepository<StoredEvent>()
             .QueryAsNoTracking()
             .Where(storedEvent => storedEvent.AggregateType == aggregateType && storedEvent.AggregateId == aggregateId && storedEvent.Version >= fromVersion)
             .ToListAsync(cancellationToken);
@@ -92,7 +92,7 @@ internal sealed class EventStoreService(
         DateTime? to = null,
         CancellationToken cancellationToken = default)
     {
-        var query = unitOfWork.Repository<StoredEvent>()
+        var query = unitOfWork.QueryRepository<StoredEvent>()
             .QueryAsNoTracking()
             .Where(storedEvent => storedEvent.EventType == eventType);
 

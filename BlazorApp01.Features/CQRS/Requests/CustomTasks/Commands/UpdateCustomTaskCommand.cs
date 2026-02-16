@@ -26,7 +26,7 @@ internal sealed class UpdateCustomTaskCommandHandler(
 {
     public async ValueTask<Result<bool>> Handle(UpdateCustomTaskCommand request, CancellationToken cancellationToken)
     {
-        var customTask = await unitOfWork.Repository<CustomTask>()
+        var customTask = await unitOfWork.CommandRepository<CustomTask>()
             .FindAsync(request.CustomTaskId, cancellationToken);
 
         if (customTask == null)
@@ -44,7 +44,7 @@ internal sealed class UpdateCustomTaskCommandHandler(
         customTask.IsActive = request.IsActive;
         customTask.RowVersion = request.RowVersion;
 
-        unitOfWork.Repository<CustomTask>().Update(customTask);
+        unitOfWork.CommandRepository<CustomTask>().Update(customTask);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Raise CustomTaskStatusChangedEvent if status changed

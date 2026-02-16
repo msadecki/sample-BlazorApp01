@@ -12,7 +12,7 @@ internal sealed class GetApplicationUserByIdQueryHandler(IUnitOfWork unitOfWork)
 {
     public async ValueTask<Result<ApplicationUser?>> Handle(GetApplicationUserByIdQuery request, CancellationToken cancellationToken)
     {
-        return await unitOfWork.Repository<ApplicationUser>()
+        return await unitOfWork.QueryRepository<ApplicationUser>()
             .QueryAsNoTracking()
             .FirstOrDefaultAsync(applicationUser => applicationUser.Id == request.UserId, cancellationToken);
     }

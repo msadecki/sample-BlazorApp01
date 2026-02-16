@@ -11,7 +11,7 @@ internal sealed class GetOutboxMessageByIdQueryHandler(IUnitOfWork unitOfWork) :
 {
     public async ValueTask<Result<OutboxMessage?>> Handle(GetOutboxMessageByIdQuery request, CancellationToken cancellationToken)
     {
-        return await unitOfWork.Repository<OutboxMessage>()
+        return await unitOfWork.QueryRepository<OutboxMessage>()
             .FindAsNoTrackingAsync(request.OutboxMessageId, cancellationToken);
     }
 }

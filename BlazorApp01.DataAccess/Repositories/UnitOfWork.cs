@@ -19,11 +19,18 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     Task<IDbContextTransaction?> TryBeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Gets a generic repository instance for the specified entity type.
+    /// Gets a generic query repository instance (for read only operations) for the specified entity type.
     /// </summary>
     /// <typeparam name="TEntity">The entity type that implements IEntity.</typeparam>
     /// <returns>A repository instance for the specified entity type.</returns>
-    IRepository<TEntity> Repository<TEntity>() where TEntity : class, IEntity;
+    IQueryRepository<TEntity> QueryRepository<TEntity>() where TEntity : class, IEntity;
+
+    /// <summary>
+    /// Gets a generic command repository instance (for editing operations) for the specified entity type.
+    /// </summary>
+    /// <typeparam name="TEntity">The entity type that implements IEntity.</typeparam>
+    /// <returns>A repository instance for the specified entity type.</returns>
+    ICommandRepository<TEntity> CommandRepository<TEntity>() where TEntity : class, IEntity;
 
     /// <summary>
     /// Asynchronously saves all changes made in this unit of work to the database.
@@ -74,7 +81,17 @@ internal sealed class UnitOfWork(
         return await BeginTransactionAsync(isolationLevel, cancellationToken);
     }
 
-    public IRepository<TEntity> Repository<TEntity>() where TEntity : class, IEntity
+    public IQueryRepository<TEntity> QueryRepository<TEntity>() where TEntity : class, IEntity
+    {
+        return Repository<TEntity>();
+    }
+
+    public ICommandRepository<TEntity> CommandRepository<TEntity>() where TEntity : class, IEntity
+    {
+        return Repository<TEntity>();
+    }
+
+    private IRepository<TEntity> Repository<TEntity>() where TEntity : class, IEntity
     {
         return (IRepository<TEntity>)_repositories.GetOrAdd(
             typeof(TEntity),

@@ -17,14 +17,14 @@ internal sealed class OutboxService(IUnitOfWork unitOfWork) : IOutboxService
 {
     public async Task AddOutboxMessageAsync(OutboxMessage message, CancellationToken cancellationToken = default)
     {
-        await unitOfWork.Repository<OutboxMessage>().AddAsync(message, cancellationToken);
+        await unitOfWork.CommandRepository<OutboxMessage>().AddAsync(message, cancellationToken);
     }
 
     public async Task<IReadOnlyList<OutboxMessage>> GetPendingMessagesAsync(
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
-        return await unitOfWork.Repository<OutboxMessage>()
+        return await unitOfWork.QueryRepository<OutboxMessage>()
             .QueryAsNoTracking()
             .Where(outboxMessage => outboxMessage.Status == OutboxMessageStatus.Pending && outboxMessage.RetryCount < 5)
             .OrderBy(outboxMessage => outboxMessage.CreatedAt)
@@ -34,12 +34,12 @@ internal sealed class OutboxService(IUnitOfWork unitOfWork) : IOutboxService
 
     public async Task MarkAsPublishedAsync(long outboxMessageId, CancellationToken cancellationToken = default)
     {
-        var outboxMessage = await unitOfWork.Repository<OutboxMessage>().FindAsync(outboxMessageId, cancellationToken);
+        var outboxMessage = await unitOfWork.CommandRepository<OutboxMessage>().FindAsync(outboxMessageId, cancellationToken);
         if (outboxMessage != null)
         {
             outboxMessage.Status = OutboxMessageStatus.Published;
             outboxMessage.PublishedAt = DateTime.UtcNow;
-            unitOfWork.Repository<OutboxMessage>().Update(outboxMessage);
+            unitOfWork.CommandRepository<OutboxMessage>().Update(outboxMessage);
         }
 
         await unitOfWork.SaveChangesAsync();
@@ -47,14 +47,14 @@ internal sealed class OutboxService(IUnitOfWork unitOfWork) : IOutboxService
 
     public async Task MarkAsFailedAsync(long outboxMessageId, string error, CancellationToken cancellationToken = default)
     {
-        var outboxMessage = await unitOfWork.Repository<OutboxMessage>().FindAsync(outboxMessageId, cancellationToken);
+        var outboxMessage = await unitOfWork.CommandRepository<OutboxMessage>().FindAsync(outboxMessageId, cancellationToken);
         if (outboxMessage != null)
         {
             outboxMessage.Status = OutboxMessageStatus.Failed;
             outboxMessage.Error = error.Length > 2000 ? error[..2000] : error;
             outboxMessage.RetryCount++;
             outboxMessage.ProcessedAt = DateTime.UtcNow;
-            unitOfWork.Repository<OutboxMessage>().Update(outboxMessage);
+            unitOfWork.CommandRepository<OutboxMessage>().Update(outboxMessage);
         }
 
         await unitOfWork.SaveChangesAsync();

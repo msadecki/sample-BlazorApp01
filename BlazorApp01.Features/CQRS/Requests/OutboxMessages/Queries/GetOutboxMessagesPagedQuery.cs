@@ -26,7 +26,7 @@ internal sealed class GetOutboxMessagesPagedQueryHandler(IUnitOfWork unitOfWork)
 {
     public async ValueTask<Result<GetOutboxMessagesPagedResponse>> Handle(GetOutboxMessagesPagedQuery request, CancellationToken cancellationToken)
     {
-        var query = unitOfWork.Repository<OutboxMessage>().QueryAsNoTracking();
+        var query = unitOfWork.QueryRepository<OutboxMessage>().QueryAsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.EventTypeFilter))
         {

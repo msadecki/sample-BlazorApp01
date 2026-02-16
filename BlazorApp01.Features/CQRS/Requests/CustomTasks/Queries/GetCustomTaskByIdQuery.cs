@@ -11,7 +11,7 @@ internal sealed class GetCustomTaskByIdQueryHandler(IUnitOfWork unitOfWork) : IQ
 {
     public async ValueTask<Result<CustomTask?>> Handle(GetCustomTaskByIdQuery request, CancellationToken cancellationToken)
     {
-        return await unitOfWork.Repository<CustomTask>()
+        return await unitOfWork.QueryRepository<CustomTask>()
             .FindAsNoTrackingAsync(request.CustomTaskId, cancellationToken);
     }
 }

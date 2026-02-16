@@ -26,7 +26,7 @@ internal sealed class GetStoredEventsPagedQueryHandler(IUnitOfWork unitOfWork) :
 {
     public async ValueTask<Result<GetStoredEventsPagedResponse>> Handle(GetStoredEventsPagedQuery request, CancellationToken cancellationToken)
     {
-        var query = unitOfWork.Repository<StoredEvent>().QueryAsNoTracking();
+        var query = unitOfWork.QueryRepository<StoredEvent>().QueryAsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.EventTypeFilter))
         {
