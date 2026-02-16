@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Data;
 using BlazorApp01.DataAccess.Contexts;
 using BlazorApp01.Domain.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BlazorApp01.DataAccess.Repositories;
 
@@ -11,6 +13,11 @@ namespace BlazorApp01.DataAccess.Repositories;
 /// </summary>
 public interface IUnitOfWork : IDisposable, IAsyncDisposable
 {
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
+    Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken);
+    Task<IDbContextTransaction?> TryBeginTransactionAsync(CancellationToken cancellationToken);
+    Task<IDbContextTransaction?> TryBeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken);
+
     /// <summary>
     /// Gets a generic repository instance for the specified entity type.
     /// </summary>
@@ -36,9 +43,36 @@ internal sealed class UnitOfWork(
     IDbContextFactory<AppDbContext> contextFactory,
     IRepositoryFactory repositoryFactory) : IUnitOfWork
 {
+    private const IsolationLevel DefaultIsolationLevel = IsolationLevel.ReadCommitted;
+
     private readonly AppDbContext _context = contextFactory.CreateDbContext();
     private readonly ConcurrentDictionary<Type, IRepository> _repositories = new ConcurrentDictionary<Type, IRepository>();
     private bool _disposed;
+
+    public async Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        return await BeginTransactionAsync(DefaultIsolationLevel, cancellationToken);
+    }
+
+    public async Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken)
+    {
+        return await _context.Database.BeginTransactionAsync(isolationLevel, cancellationToken);
+    }
+
+    public async Task<IDbContextTransaction?> TryBeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        return await TryBeginTransactionAsync(DefaultIsolationLevel, cancellationToken);
+    }
+
+    public async Task<IDbContextTransaction?> TryBeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken)
+    {
+        if (_context.Database.CurrentTransaction != null)
+        {
+            return null;
+        }
+
+        return await BeginTransactionAsync(isolationLevel, cancellationToken);
+    }
 
     public IRepository<TEntity> Repository<TEntity>() where TEntity : class, IEntity
     {
