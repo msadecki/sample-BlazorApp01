@@ -22,46 +22,46 @@ public sealed record GetApplicationUsersPagedResponse(
 
 internal sealed class GetApplicationUsersPagedQueryHandler(IUnitOfWork unitOfWork) : IQueryHandler<GetApplicationUsersPagedQuery, GetApplicationUsersPagedResponse>
 {
-    public async ValueTask<Result<GetApplicationUsersPagedResponse>> Handle(GetApplicationUsersPagedQuery query, CancellationToken cancellationToken)
+    public async ValueTask<Result<GetApplicationUsersPagedResponse>> Handle(GetApplicationUsersPagedQuery request, CancellationToken cancellationToken)
     {
-        var dbQuery = unitOfWork.Repository<ApplicationUser>().QueryAsNoTracking();
+        var query = unitOfWork.Repository<ApplicationUser>().QueryAsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(query.SearchFilter))
+        if (!string.IsNullOrWhiteSpace(request.SearchFilter))
         {
-            dbQuery = dbQuery.Where(user =>
-                (user.Email != null && user.Email.Contains(query.SearchFilter)) ||
-                (user.UserName != null && user.UserName.Contains(query.SearchFilter)));
+            query = query.Where(applicationUser =>
+                (applicationUser.Email != null && applicationUser.Email.Contains(request.SearchFilter)) ||
+                (applicationUser.UserName != null && applicationUser.UserName.Contains(request.SearchFilter)));
         }
 
-        var totalCount = await dbQuery.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken);
 
-        var sortBy = string.IsNullOrWhiteSpace(query.SortBy)
+        var sortBy = string.IsNullOrWhiteSpace(request.SortBy)
             ? "UserName"
-            : query.SortBy;
+            : request.SortBy;
 
-        dbQuery = ApplySorting(dbQuery, sortBy, query.SortAscending);
+        query = ApplySorting(query, sortBy, request.SortAscending);
 
-        var items = await dbQuery
-            .Skip(query.StartIndex)
-            .Take(query.Count)
+        var applicationUsers = await query
+            .Skip(request.StartIndex)
+            .Take(request.Count)
             .ToListAsync(cancellationToken);
 
-        return new GetApplicationUsersPagedResponse(items, totalCount);
+        return new GetApplicationUsersPagedResponse(applicationUsers, totalCount);
     }
 
     private static IQueryable<ApplicationUser> ApplySorting(IQueryable<ApplicationUser> query, string sortBy, bool ascending)
     {
         Expression<Func<ApplicationUser, object>> keySelector = sortBy.ToLowerInvariant() switch
         {
-            "email" => x => x.Email ?? string.Empty,
-            "emailconfirmed" => x => x.EmailConfirmed,
-            "phonenumber" => x => x.PhoneNumber ?? string.Empty,
-            "phonenumberconfirmed" => x => x.PhoneNumberConfirmed,
-            "twofactorenabled" => x => x.TwoFactorEnabled,
-            "lockoutenabled" => x => x.LockoutEnabled,
-            "lockoutend" => x => x.LockoutEnd ?? DateTimeOffset.MinValue,
-            "accessfailedcount" => x => x.AccessFailedCount,
-            _ => x => x.UserName ?? string.Empty
+            "email" => applicationUser => applicationUser.Email ?? string.Empty,
+            "emailconfirmed" => applicationUser => applicationUser.EmailConfirmed,
+            "phonenumber" => applicationUser => applicationUser.PhoneNumber ?? string.Empty,
+            "phonenumberconfirmed" => applicationUser => applicationUser.PhoneNumberConfirmed,
+            "twofactorenabled" => applicationUser => applicationUser.TwoFactorEnabled,
+            "lockoutenabled" => applicationUser => applicationUser.LockoutEnabled,
+            "lockoutend" => applicationUser => applicationUser.LockoutEnd ?? DateTimeOffset.MinValue,
+            "accessfailedcount" => applicationUser => applicationUser.AccessFailedCount,
+            _ => applicationUser => applicationUser.UserName ?? string.Empty
         };
 
         return ascending ? query.OrderBy(keySelector) : query.OrderByDescending(keySelector);

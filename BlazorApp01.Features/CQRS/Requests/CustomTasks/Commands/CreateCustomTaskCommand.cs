@@ -23,16 +23,16 @@ internal sealed class CreateCustomTaskCommandHandler(
     IEventStoreService eventStoreService,
     IEventPublisher eventPublisher) : ICommandHandler<CreateCustomTaskCommand, int>
 {
-    public async ValueTask<Result<int>> Handle(CreateCustomTaskCommand command, CancellationToken cancellationToken)
+    public async ValueTask<Result<int>> Handle(CreateCustomTaskCommand request, CancellationToken cancellationToken)
     {
         var customTask = new CustomTask
         {
-            Description = command.Description,
-            Status = command.Status,
-            CreatedAt = command.CreatedAt,
-            DueDate = command.DueDate,
-            CompletionDate = command.CompletionDate,
-            IsActive = command.IsActive
+            Description = request.Description,
+            Status = request.Status,
+            CreatedAt = request.CreatedAt,
+            DueDate = request.DueDate,
+            CompletionDate = request.CompletionDate,
+            IsActive = request.IsActive
         };
 
         await unitOfWork.Repository<CustomTask>().AddAsync(customTask, cancellationToken);

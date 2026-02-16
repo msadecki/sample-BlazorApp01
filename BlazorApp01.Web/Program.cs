@@ -6,8 +6,6 @@ using BlazorApp01.Web;
 using BlazorApp01.Web.Components;
 using BlazorApp01.Web.Components.Account;
 using Hangfire;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 

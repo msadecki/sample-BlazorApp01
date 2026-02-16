@@ -24,48 +24,48 @@ public sealed record GetOutboxMessagesPagedResponse(
 
 internal sealed class GetOutboxMessagesPagedQueryHandler(IUnitOfWork unitOfWork) : IQueryHandler<GetOutboxMessagesPagedQuery, GetOutboxMessagesPagedResponse>
 {
-    public async ValueTask<Result<GetOutboxMessagesPagedResponse>> Handle(GetOutboxMessagesPagedQuery query, CancellationToken cancellationToken)
+    public async ValueTask<Result<GetOutboxMessagesPagedResponse>> Handle(GetOutboxMessagesPagedQuery request, CancellationToken cancellationToken)
     {
-        var dbQuery = unitOfWork.Repository<OutboxMessage>().QueryAsNoTracking();
+        var query = unitOfWork.Repository<OutboxMessage>().QueryAsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(query.EventTypeFilter))
+        if (!string.IsNullOrWhiteSpace(request.EventTypeFilter))
         {
-            dbQuery = dbQuery.Where(message => message.EventType.Contains(query.EventTypeFilter));
+            query = query.Where(outboxMessage => outboxMessage.EventType.Contains(request.EventTypeFilter));
         }
 
-        if (query.StatusFilter.HasValue)
+        if (request.StatusFilter.HasValue)
         {
-            dbQuery = dbQuery.Where(message => message.Status == query.StatusFilter.Value);
+            query = query.Where(outboxMessage => outboxMessage.Status == request.StatusFilter.Value);
         }
 
-        var totalCount = await dbQuery.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken);
 
-        var sortBy = string.IsNullOrWhiteSpace(query.SortBy)
+        var sortBy = string.IsNullOrWhiteSpace(request.SortBy)
             ? "OutboxMessageId"
-            : query.SortBy;
+            : request.SortBy;
 
-        dbQuery = ApplySorting(dbQuery, sortBy, query.SortAscending);
+        query = ApplySorting(query, sortBy, request.SortAscending);
 
-        var items = await dbQuery
-            .Skip(query.StartIndex)
-            .Take(query.Count)
+        var outboxMessages = await query
+            .Skip(request.StartIndex)
+            .Take(request.Count)
             .ToListAsync(cancellationToken);
 
-        return new GetOutboxMessagesPagedResponse(items, totalCount);
+        return new GetOutboxMessagesPagedResponse(outboxMessages, totalCount);
     }
 
     private static IQueryable<OutboxMessage> ApplySorting(IQueryable<OutboxMessage> query, string sortBy, bool ascending)
     {
         Expression<Func<OutboxMessage, object>> keySelector = sortBy.ToLowerInvariant() switch
         {
-            "eventtype" => x => x.EventType,
-            "status" => x => x.Status,
-            "createdat" => x => x.CreatedAt,
-            "processedat" => x => x.ProcessedAt ?? DateTime.MinValue,
-            "publishedat" => x => x.PublishedAt ?? DateTime.MinValue,
-            "retrycount" => x => x.RetryCount,
-            "messageid" => x => x.MessageId,
-            _ => x => x.OutboxMessageId
+            "eventtype" => outboxMessage => outboxMessage.EventType,
+            "status" => outboxMessage => outboxMessage.Status,
+            "createdat" => outboxMessage => outboxMessage.CreatedAt,
+            "processedat" => outboxMessage => outboxMessage.ProcessedAt ?? DateTime.MinValue,
+            "publishedat" => outboxMessage => outboxMessage.PublishedAt ?? DateTime.MinValue,
+            "retrycount" => outboxMessage => outboxMessage.RetryCount,
+            "messageid" => outboxMessage => outboxMessage.MessageId,
+            _ => outboxMessage => outboxMessage.OutboxMessageId
         };
 
         return ascending ? query.OrderBy(keySelector) : query.OrderByDescending(keySelector);

@@ -2,6 +2,7 @@ using System.Text.Json;
 using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Domain.Events.Abstractions;
 using BlazorApp01.Domain.Models.EventStore;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlazorApp01.Features.Services.EventStore;
 
@@ -58,6 +59,7 @@ internal sealed class EventStoreService(
         };
 
         await unitOfWork.Repository<StoredEvent>().AddAsync(storedEvent, cancellationToken);
+
         return storedEvent;
     }
 
@@ -67,9 +69,9 @@ internal sealed class EventStoreService(
         CancellationToken cancellationToken = default)
     {
         return await unitOfWork.Repository<StoredEvent>()
-            .FindAsync(
-                e => e.AggregateType == aggregateType && e.AggregateId == aggregateId,
-                cancellationToken);
+            .QueryAsNoTracking()
+            .Where(storedEvent => storedEvent.AggregateType == aggregateType && storedEvent.AggregateId == aggregateId)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<StoredEvent>> GetEventsAsync(
@@ -79,11 +81,9 @@ internal sealed class EventStoreService(
         CancellationToken cancellationToken = default)
     {
         return await unitOfWork.Repository<StoredEvent>()
-            .FindAsync(
-                e => e.AggregateType == aggregateType &&
-                     e.AggregateId == aggregateId &&
-                     e.Version >= fromVersion,
-                cancellationToken);
+            .QueryAsNoTracking()
+            .Where(storedEvent => storedEvent.AggregateType == aggregateType && storedEvent.AggregateId == aggregateId && storedEvent.Version >= fromVersion)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<StoredEvent>> GetEventsByTypeAsync(
@@ -92,20 +92,20 @@ internal sealed class EventStoreService(
         DateTime? to = null,
         CancellationToken cancellationToken = default)
     {
-        var repository = unitOfWork.Repository<StoredEvent>();
-        var query = repository.QueryAsNoTracking()
-            .Where(e => e.EventType == eventType);
+        var query = unitOfWork.Repository<StoredEvent>()
+            .QueryAsNoTracking()
+            .Where(storedEvent => storedEvent.EventType == eventType);
 
         if (from.HasValue)
         {
-            query = query.Where(e => e.OccurredAt >= from.Value);
+            query = query.Where(storedEvent => storedEvent.OccurredAt >= from.Value);
         }
 
         if (to.HasValue)
         {
-            query = query.Where(e => e.OccurredAt <= to.Value);
+            query = query.Where(storedEvent => storedEvent.OccurredAt <= to.Value);
         }
 
-        return query.OrderBy(e => e.OccurredAt).ToList();
+        return await query.OrderBy(storedEvent => storedEvent.OccurredAt).ToListAsync(cancellationToken);
     }
 }

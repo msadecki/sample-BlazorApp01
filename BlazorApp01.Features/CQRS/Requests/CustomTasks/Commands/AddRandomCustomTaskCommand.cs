@@ -23,7 +23,7 @@ internal sealed class AddRandomCustomTaskCommandHandler(ISenderFacade senderFaca
         "Prepare demo for stakeholders"
     ];
 
-    public async ValueTask<Result<int>> Handle(AddRandomCustomTaskCommand command, CancellationToken cancellationToken)
+    public async ValueTask<Result<int>> Handle(AddRandomCustomTaskCommand request, CancellationToken cancellationToken)
     {
         var random = Random.Shared;
         var now = DateTime.UtcNow;

@@ -1,110 +1,84 @@
-using System.Linq.Expressions;
 using BlazorApp01.DataAccess.Contexts;
 using BlazorApp01.Domain.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace BlazorApp01.DataAccess.Repositories;
+
+public interface IQueryRepository<TEntity> where TEntity : class, IEntity
+{
+    Task<TEntity?> FindAsNoTrackingAsync(object?[]? keyValues, CancellationToken cancellationToken);
+    Task<TEntity?> FindAsNoTrackingAsync<TKeyValue>(TKeyValue keyValue, CancellationToken cancellationToken);
+    Task<List<TEntity>> GetAllAsNoTrackingAsync(CancellationToken cancellationToken);
+    IQueryable<TEntity> QueryAsNoTracking();
+}
+
+public interface ICommandRepository<TEntity> where TEntity : class, IEntity
+{
+    Task<TEntity?> FindAsync(object?[]? keyValues, CancellationToken cancellationToken);
+    Task<TEntity?> FindAsync<TKeyValue>(TKeyValue keyValue, CancellationToken cancellationToken);
+    Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken);
+    Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken);
+    EntityEntry<TEntity> Update(TEntity entity);
+    EntityEntry<TEntity> Remove(TEntity entity);
+    void RemoveRange(IEnumerable<TEntity> entities);
+    IQueryable<TEntity> Query();
+}
 
 public interface IRepository
 { }
 
-public interface IRepository<TEntity> : IRepository
-    where TEntity : class, IEntity
+public interface IRepository<TEntity> : IRepository, IQueryRepository<TEntity>, ICommandRepository<TEntity>
+     where TEntity : class, IEntity
+{ }
+
+internal sealed class Repository<TEntity>(AppDbContext context) : IRepository<TEntity> where TEntity : class, IEntity
 {
-    IQueryable<TEntity> QueryAsNoTracking();
-    IQueryable<TEntity> Query();
+    private readonly AppDbContext _context = context;
+    private readonly DbSet<TEntity> _dbSet = context.Set<TEntity>();
 
-    Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-    Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-    Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
-    Task<int> CountAsync(Expression<Func<TEntity, bool>>? predicate = null, CancellationToken cancellationToken = default);
-
-    Task AddAsync(TEntity entity, CancellationToken cancellationToken = default);
-    Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default);
-
-    void Update(TEntity entity);
-    void UpdateRange(IEnumerable<TEntity> entities);
-
-    void Remove(TEntity entity);
-    void RemoveRange(IEnumerable<TEntity> entities);
-}
-
-internal class Repository<TEntity>(AppDbContext context) : IRepository<TEntity> where TEntity : class, IEntity
-{
-    protected readonly AppDbContext Context = context;
-    protected readonly DbSet<TEntity> DbSet = context.Set<TEntity>();
-
-    public virtual IQueryable<TEntity> QueryAsNoTracking()
+    public async Task<TEntity?> FindAsNoTrackingAsync(object?[]? keyValues, CancellationToken cancellationToken)
     {
-        return DbSet.AsNoTracking();
+        var entity = await _dbSet.FindAsync(keyValues, cancellationToken);
+
+        if (entity != null)
+        {
+            _context.Entry(entity).State = EntityState.Detached;
+        }
+
+        return entity;
     }
 
-    public virtual IQueryable<TEntity> Query()
-    {
-        return DbSet;
-    }
+    public async Task<TEntity?> FindAsNoTrackingAsync<TKeyValue>(TKeyValue keyValue, CancellationToken cancellationToken) =>
+        await FindAsNoTrackingAsync([keyValue], cancellationToken);
 
-    public virtual async Task<TEntity?> GetByIdAsync(object id, CancellationToken cancellationToken = default)
-    {
-        return await DbSet.FindAsync(new[] { id }, cancellationToken);
-    }
+    public async Task<List<TEntity>> GetAllAsNoTrackingAsync(CancellationToken cancellationToken) =>
+        await _dbSet.AsNoTracking().ToListAsync(cancellationToken);
 
-    public virtual async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        return await DbSet.ToListAsync(cancellationToken);
-    }
+    public IQueryable<TEntity> QueryAsNoTracking() =>
+        _dbSet.AsNoTracking();
 
-    public virtual async Task<IReadOnlyList<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-    {
-        return await DbSet.Where(predicate).ToListAsync(cancellationToken);
-    }
+    public async Task<TEntity?> FindAsync(object?[]? keyValues, CancellationToken cancellationToken) =>
+        await _dbSet.FindAsync(keyValues, cancellationToken);
 
-    public virtual async Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-    {
-        return await DbSet.FirstOrDefaultAsync(predicate, cancellationToken);
-    }
+    public async Task<TEntity?> FindAsync<TKeyValue>(TKeyValue keyValue, CancellationToken cancellationToken) =>
+        await FindAsync([keyValue], cancellationToken);
 
-    public virtual async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
-    {
-        return await DbSet.AnyAsync(predicate, cancellationToken);
-    }
+    public async Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken) =>
+        (await _dbSet.AddAsync(entity, cancellationToken)).Entity;
 
-    public virtual async Task<int> CountAsync(Expression<Func<TEntity, bool>>? predicate = null, CancellationToken cancellationToken = default)
-    {
-        return predicate == null 
-            ? await DbSet.CountAsync(cancellationToken) 
-            : await DbSet.CountAsync(predicate, cancellationToken);
-    }
+    public async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken) =>
+        await _dbSet.AddRangeAsync(entities, cancellationToken);
 
-    public virtual async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default)
-    {
-        await DbSet.AddAsync(entity, cancellationToken);
-    }
+    public EntityEntry<TEntity> Update(TEntity entity) =>
+        _dbSet.Update(entity);
 
-    public virtual async Task AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
-    {
-        await DbSet.AddRangeAsync(entities, cancellationToken);
-    }
+    public EntityEntry<TEntity> Remove(TEntity entity) =>
+        _dbSet.Remove(entity);
 
-    public virtual void Update(TEntity entity)
-    {
-        DbSet.Update(entity);
-    }
+    public void RemoveRange(IEnumerable<TEntity> entities) =>
+        _dbSet.RemoveRange(entities);
 
-    public virtual void UpdateRange(IEnumerable<TEntity> entities)
-    {
-        DbSet.UpdateRange(entities);
-    }
-
-    public virtual void Remove(TEntity entity)
-    {
-        DbSet.Remove(entity);
-    }
-
-    public virtual void RemoveRange(IEnumerable<TEntity> entities)
-    {
-        DbSet.RemoveRange(entities);
-    }
+    public IQueryable<TEntity> Query() =>
+        _dbSet;
 }

@@ -22,43 +22,43 @@ public sealed record GetCustomTasksPagedResponse(
 
 internal sealed class GetCustomTasksPagedQueryHandler(IUnitOfWork unitOfWork) : IQueryHandler<GetCustomTasksPagedQuery, GetCustomTasksPagedResponse>
 {
-    public async ValueTask<Result<GetCustomTasksPagedResponse>> Handle(GetCustomTasksPagedQuery query, CancellationToken cancellationToken)
+    public async ValueTask<Result<GetCustomTasksPagedResponse>> Handle(GetCustomTasksPagedQuery request, CancellationToken cancellationToken)
     {
-        var dbQuery = unitOfWork.Repository<CustomTask>().QueryAsNoTracking();
+        var query = unitOfWork.Repository<CustomTask>().QueryAsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(query.DescriptionFilter))
+        if (!string.IsNullOrWhiteSpace(request.DescriptionFilter))
         {
-            dbQuery = dbQuery.Where(customTask => customTask.Description.Contains(query.DescriptionFilter));
+            query = query.Where(customTask => customTask.Description.Contains(request.DescriptionFilter));
         }
 
-        var totalCount = await dbQuery.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken);
 
-        var sortBy = string.IsNullOrWhiteSpace(query.SortBy)
+        var sortBy = string.IsNullOrWhiteSpace(request.SortBy)
             ? "CustomTaskId"
-            : query.SortBy;
+            : request.SortBy;
 
-        dbQuery = ApplySorting(dbQuery, sortBy, query.SortAscending);
+        query = ApplySorting(query, sortBy, request.SortAscending);
 
-        var items = await dbQuery
-            .Skip(query.StartIndex)
-            .Take(query.Count)
+        var customTasks = await query
+            .Skip(request.StartIndex)
+            .Take(request.Count)
             .ToListAsync(cancellationToken);
 
-        return new GetCustomTasksPagedResponse(items, totalCount);
+        return new GetCustomTasksPagedResponse(customTasks, totalCount);
     }
 
     private static IQueryable<CustomTask> ApplySorting(IQueryable<CustomTask> query, string sortBy, bool ascending)
     {
         Expression<Func<CustomTask, object>> keySelector = sortBy.ToLowerInvariant() switch
         {
-            "description" => x => x.Description,
-            "status" => x => x.Status,
-            "createdat" => x => x.CreatedAt,
-            "duedate" => x => x.DueDate,
-            "completiondate" => x => x.CompletionDate ?? DateTime.MinValue,
-            "isactive" => x => x.IsActive,
-            "rowversion" => x => x.RowVersion,
-            _ => x => x.CustomTaskId
+            "description" => customTask => customTask.Description,
+            "status" => customTask => customTask.Status,
+            "createdat" => customTask => customTask.CreatedAt,
+            "duedate" => customTask => customTask.DueDate,
+            "completiondate" => customTask => customTask.CompletionDate ?? DateTime.MinValue,
+            "isactive" => customTask => customTask.IsActive,
+            "rowversion" => customTask => customTask.RowVersion,
+            _ => customTask => customTask.CustomTaskId
         };
 
         return ascending ? query.OrderBy(keySelector) : query.OrderByDescending(keySelector);

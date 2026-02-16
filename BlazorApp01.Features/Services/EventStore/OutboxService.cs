@@ -1,6 +1,7 @@
 using BlazorApp01.DataAccess.Repositories;
 using BlazorApp01.Domain.Enums;
 using BlazorApp01.Domain.Models.EventStore;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlazorApp01.Features.Services.EventStore;
 
@@ -8,8 +9,8 @@ public interface IOutboxService
 {
     Task AddOutboxMessageAsync(OutboxMessage message, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OutboxMessage>> GetPendingMessagesAsync(int batchSize = 100, CancellationToken cancellationToken = default);
-    Task MarkAsPublishedAsync(long id, CancellationToken cancellationToken = default);
-    Task MarkAsFailedAsync(long id, string error, CancellationToken cancellationToken = default);
+    Task MarkAsPublishedAsync(long outboxMessageId, CancellationToken cancellationToken = default);
+    Task MarkAsFailedAsync(long outboxMessageId, string error, CancellationToken cancellationToken = default);
 }
 
 internal sealed class OutboxService(IUnitOfWork unitOfWork) : IOutboxService
@@ -23,39 +24,37 @@ internal sealed class OutboxService(IUnitOfWork unitOfWork) : IOutboxService
         int batchSize = 100,
         CancellationToken cancellationToken = default)
     {
-        var repository = unitOfWork.Repository<OutboxMessage>();
-        var messages = repository.QueryAsNoTracking()
-            .Where(m => m.Status == OutboxMessageStatus.Pending && m.RetryCount < 5)
-            .OrderBy(m => m.CreatedAt)
+        return await unitOfWork.Repository<OutboxMessage>()
+            .QueryAsNoTracking()
+            .Where(outboxMessage => outboxMessage.Status == OutboxMessageStatus.Pending && outboxMessage.RetryCount < 5)
+            .OrderBy(outboxMessage => outboxMessage.CreatedAt)
             .Take(batchSize)
-            .ToList();
-
-        return messages;
+            .ToListAsync(cancellationToken);
     }
 
-    public async Task MarkAsPublishedAsync(long id, CancellationToken cancellationToken = default)
+    public async Task MarkAsPublishedAsync(long outboxMessageId, CancellationToken cancellationToken = default)
     {
-        var message = await unitOfWork.Repository<OutboxMessage>().GetByIdAsync(id, cancellationToken);
-        if (message != null)
+        var outboxMessage = await unitOfWork.Repository<OutboxMessage>().FindAsync(outboxMessageId, cancellationToken);
+        if (outboxMessage != null)
         {
-            message.Status = OutboxMessageStatus.Published;
-            message.PublishedAt = DateTime.UtcNow;
-            unitOfWork.Repository<OutboxMessage>().Update(message);
+            outboxMessage.Status = OutboxMessageStatus.Published;
+            outboxMessage.PublishedAt = DateTime.UtcNow;
+            unitOfWork.Repository<OutboxMessage>().Update(outboxMessage);
         }
 
         await unitOfWork.SaveChangesAsync();
     }
 
-    public async Task MarkAsFailedAsync(long id, string error, CancellationToken cancellationToken = default)
+    public async Task MarkAsFailedAsync(long outboxMessageId, string error, CancellationToken cancellationToken = default)
     {
-        var message = await unitOfWork.Repository<OutboxMessage>().GetByIdAsync(id, cancellationToken);
-        if (message != null)
+        var outboxMessage = await unitOfWork.Repository<OutboxMessage>().FindAsync(outboxMessageId, cancellationToken);
+        if (outboxMessage != null)
         {
-            message.Status = OutboxMessageStatus.Failed;
-            message.Error = error.Length > 2000 ? error[..2000] : error;
-            message.RetryCount++;
-            message.ProcessedAt = DateTime.UtcNow;
-            unitOfWork.Repository<OutboxMessage>().Update(message);
+            outboxMessage.Status = OutboxMessageStatus.Failed;
+            outboxMessage.Error = error.Length > 2000 ? error[..2000] : error;
+            outboxMessage.RetryCount++;
+            outboxMessage.ProcessedAt = DateTime.UtcNow;
+            unitOfWork.Repository<OutboxMessage>().Update(outboxMessage);
         }
 
         await unitOfWork.SaveChangesAsync();

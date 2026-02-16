@@ -24,53 +24,53 @@ public sealed record GetStoredEventsPagedResponse(
 
 internal sealed class GetStoredEventsPagedQueryHandler(IUnitOfWork unitOfWork) : IQueryHandler<GetStoredEventsPagedQuery, GetStoredEventsPagedResponse>
 {
-    public async ValueTask<Result<GetStoredEventsPagedResponse>> Handle(GetStoredEventsPagedQuery query, CancellationToken cancellationToken)
+    public async ValueTask<Result<GetStoredEventsPagedResponse>> Handle(GetStoredEventsPagedQuery request, CancellationToken cancellationToken)
     {
-        var dbQuery = unitOfWork.Repository<StoredEvent>().QueryAsNoTracking();
+        var query = unitOfWork.Repository<StoredEvent>().QueryAsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(query.EventTypeFilter))
+        if (!string.IsNullOrWhiteSpace(request.EventTypeFilter))
         {
-            dbQuery = dbQuery.Where(evt => evt.EventType.Contains(query.EventTypeFilter));
+            query = query.Where(storedEvent => storedEvent.EventType.Contains(request.EventTypeFilter));
         }
 
-        if (!string.IsNullOrWhiteSpace(query.AggregateTypeFilter))
+        if (!string.IsNullOrWhiteSpace(request.AggregateTypeFilter))
         {
-            dbQuery = dbQuery.Where(evt => evt.AggregateType.Contains(query.AggregateTypeFilter));
+            query = query.Where(storedEvent => storedEvent.AggregateType.Contains(request.AggregateTypeFilter));
         }
 
-        if (!string.IsNullOrWhiteSpace(query.AggregateIdFilter))
+        if (!string.IsNullOrWhiteSpace(request.AggregateIdFilter))
         {
-            dbQuery = dbQuery.Where(evt => evt.AggregateId.Contains(query.AggregateIdFilter));
+            query = query.Where(storedEvent => storedEvent.AggregateId.Contains(request.AggregateIdFilter));
         }
 
-        var totalCount = await dbQuery.CountAsync(cancellationToken);
+        var totalCount = await query.CountAsync(cancellationToken);
 
-        var sortBy = string.IsNullOrWhiteSpace(query.SortBy)
+        var sortBy = string.IsNullOrWhiteSpace(request.SortBy)
             ? "StoredEventId"
-            : query.SortBy;
+            : request.SortBy;
 
-        dbQuery = ApplySorting(dbQuery, sortBy, query.SortAscending);
+        query = ApplySorting(query, sortBy, request.SortAscending);
 
-        var items = await dbQuery
-            .Skip(query.StartIndex)
-            .Take(query.Count)
+        var storedEvents = await query
+            .Skip(request.StartIndex)
+            .Take(request.Count)
             .ToListAsync(cancellationToken);
 
-        return new GetStoredEventsPagedResponse(items, totalCount);
+        return new GetStoredEventsPagedResponse(storedEvents, totalCount);
     }
 
     private static IQueryable<StoredEvent> ApplySorting(IQueryable<StoredEvent> query, string sortBy, bool ascending)
     {
         Expression<Func<StoredEvent, object>> keySelector = sortBy.ToLowerInvariant() switch
         {
-            "eventtype" => x => x.EventType,
-            "aggregatetype" => x => x.AggregateType,
-            "aggregateid" => x => x.AggregateId,
-            "version" => x => x.Version,
-            "occurredat" => x => x.OccurredAt,
-            "storedat" => x => x.StoredAt,
-            "eventid" => x => x.EventId,
-            _ => x => x.StoredEventId
+            "eventtype" => storedEvent => storedEvent.EventType,
+            "aggregatetype" => storedEvent => storedEvent.AggregateType,
+            "aggregateid" => storedEvent => storedEvent.AggregateId,
+            "version" => storedEvent => storedEvent.Version,
+            "occurredat" => storedEvent => storedEvent.OccurredAt,
+            "storedat" => storedEvent => storedEvent.StoredAt,
+            "eventid" => storedEvent => storedEvent.EventId,
+            _ => storedEvent => storedEvent.StoredEventId
         };
 
         return ascending ? query.OrderBy(keySelector) : query.OrderByDescending(keySelector);

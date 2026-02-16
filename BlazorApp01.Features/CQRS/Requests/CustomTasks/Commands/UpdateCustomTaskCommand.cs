@@ -6,7 +6,6 @@ using BlazorApp01.Domain.Models;
 using BlazorApp01.Features.CQRS.MediatorFacade.Abstractions;
 using BlazorApp01.Features.Services.EventStore;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 
 namespace BlazorApp01.Features.CQRS.Requests.CustomTasks.Commands;
 
@@ -25,39 +24,38 @@ internal sealed class UpdateCustomTaskCommandHandler(
     IEventStoreService eventStoreService,
     IEventPublisher eventPublisher) : ICommandHandler<UpdateCustomTaskCommand, bool>
 {
-    public async ValueTask<Result<bool>> Handle(UpdateCustomTaskCommand command, CancellationToken cancellationToken)
+    public async ValueTask<Result<bool>> Handle(UpdateCustomTaskCommand request, CancellationToken cancellationToken)
     {
         var customTask = await unitOfWork.Repository<CustomTask>()
-            .Query()
-            .FirstOrDefaultAsync(x => x.CustomTaskId == command.CustomTaskId, cancellationToken);
+            .FindAsync(request.CustomTaskId, cancellationToken);
 
         if (customTask == null)
         {
-            return Result<bool>.NotFound($"CustomTask with ID {command.CustomTaskId} not found.");
+            return Result<bool>.NotFound($"CustomTask with ID {request.CustomTaskId} not found.");
         }
 
         var oldStatus = customTask.Status;
 
         // Update entity
-        customTask.Description = command.Description;
-        customTask.Status = command.Status;
-        customTask.DueDate = command.DueDate;
-        customTask.CompletionDate = command.CompletionDate;
-        customTask.IsActive = command.IsActive;
-        customTask.RowVersion = command.RowVersion;
+        customTask.Description = request.Description;
+        customTask.Status = request.Status;
+        customTask.DueDate = request.DueDate;
+        customTask.CompletionDate = request.CompletionDate;
+        customTask.IsActive = request.IsActive;
+        customTask.RowVersion = request.RowVersion;
 
         unitOfWork.Repository<CustomTask>().Update(customTask);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Raise CustomTaskStatusChangedEvent if status changed
-        if (oldStatus != command.Status)
+        if (oldStatus != request.Status)
         {
             var statusChangedEvent = new CustomTaskStatusChangedEvent
             {
                 CustomTaskId = customTask.CustomTaskId,
                 OldStatus = oldStatus,
-                NewStatus = command.Status,
-                CompletionDate = command.CompletionDate
+                NewStatus = request.Status,
+                CompletionDate = request.CompletionDate
             };
 
             await eventStoreService.AppendEventAsync(
@@ -70,12 +68,12 @@ internal sealed class UpdateCustomTaskCommandHandler(
             await eventPublisher.PublishAsync(statusChangedEvent, cancellationToken);
 
             // If status changed to Completed, also raise CustomTaskCompletedEvent
-            if (command.Status == CustomTaskStatus.Completed && command.CompletionDate.HasValue)
+            if (request.Status == CustomTaskStatus.Completed && request.CompletionDate.HasValue)
             {
                 var completedEvent = new CustomTaskCompletedEvent
                 {
                     CustomTaskId = customTask.CustomTaskId,
-                    CompletionDate = command.CompletionDate.Value,
+                    CompletionDate = request.CompletionDate.Value,
                     Description = customTask.Description
                 };
 

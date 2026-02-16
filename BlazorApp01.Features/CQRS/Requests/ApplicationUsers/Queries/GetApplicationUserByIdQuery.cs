@@ -10,10 +10,10 @@ public sealed record GetApplicationUserByIdQuery(string UserId) : IQuery<Applica
 
 internal sealed class GetApplicationUserByIdQueryHandler(IUnitOfWork unitOfWork) : IQueryHandler<GetApplicationUserByIdQuery, ApplicationUser?>
 {
-    public async ValueTask<Result<ApplicationUser?>> Handle(GetApplicationUserByIdQuery query, CancellationToken cancellationToken)
+    public async ValueTask<Result<ApplicationUser?>> Handle(GetApplicationUserByIdQuery request, CancellationToken cancellationToken)
     {
         return await unitOfWork.Repository<ApplicationUser>()
             .QueryAsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == query.UserId, cancellationToken);
+            .FirstOrDefaultAsync(applicationUser => applicationUser.Id == request.UserId, cancellationToken);
     }
 }
