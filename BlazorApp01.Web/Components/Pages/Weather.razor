@@ -1,6 +1,7 @@
 ﻿@page "/weather"
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using BlazorApp01.Web.Services
+@using System.Globalization
 @inject IDateTimeHelper DateTimeHelper
 @inject IWeatherService WeatherService
 @rendermode InteractiveServer
@@ -34,13 +35,41 @@ else
     </QuickGrid>
 }
 
+<div class="location-selector" style="margin-top:1rem">
+    <h3>Location</h3>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+        <label>Latitude:
+            <input type="number" step="0.000001" @bind="latitude" />
+        </label>
+        <label>Longitude:
+            <input type="number" step="0.000001" @bind="longitude" />
+        </label>
+        <button class="btn btn-primary" @onclick="LoadForecastsAsync">Get Forecast</button>
+    </div>
+
+    <div style="margin-top:0.5rem">
+        <iframe title="map" width="100%" height="300" frameborder="0"
+                src="@MapEmbedUrl"
+                style="border:1px solid #ccc"></iframe>
+    </div>
+</div>
+
 @code {
     private WeatherForecast[]? forecasts;
+    private double latitude = 52.23224240174998;
+    private double longitude = 20.93381175935411;
+
+    private string MapEmbedUrl => GetMapEmbedUrl(latitude, longitude);
 
     protected override async Task OnInitializedAsync()
     {
-        // Load real data from the weather service
-        var points = await WeatherService.GetForecastsAsync(days: 14);
+        await LoadForecastsAsync();
+    }
+
+    private async Task LoadForecastsAsync()
+    {
+        // Load real data from the weather service using currently selected location
+        var points = await WeatherService.GetForecastsAsync(days: 14, latitude: latitude, longitude: longitude);
         forecasts = points.Select(point => new WeatherForecast(DateTimeHelper)
         {
             DateTimeUtc = point.DateTime,
@@ -55,6 +84,20 @@ else
             SunsetUtc = point.Sunset,
             CreatedAtUtc = point.CreatedAtUtc
         }).ToArray();
+
+        // Update map (property reflects updated coords)
+        StateHasChanged();
+    }
+
+    private static string GetMapEmbedUrl(double lat, double lon)
+    {
+        // Build a simple OpenStreetMap embed URL with a small bbox around the marker
+        var latMin = lat - 0.02;
+        var lonMin = lon - 0.02;
+        var latMax = lat + 0.02;
+        var lonMax = lon + 0.02;
+        // Example: https://www.openstreetmap.org/export/embed.html?bbox=left,bottom,right,top&layer=mapnik&marker=lat,lon
+        return $"https://www.openstreetmap.org/export/embed.html?bbox={lonMin.ToString(CultureInfo.InvariantCulture)},{latMin.ToString(CultureInfo.InvariantCulture)},{lonMax.ToString(CultureInfo.InvariantCulture)},{latMax.ToString(CultureInfo.InvariantCulture)}&layer=mapnik&marker={lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
     }
 
         private sealed class WeatherForecast(IDateTimeHelper dateTimeHelper)
