@@ -53,6 +53,13 @@ public static class WebRegistration
         });
         services.AddScoped<IWeatherService, WeatherService>();
 
+        // Register exchange rate service and HttpClient for Frankfurter (free, no API key)
+        services.AddHttpClient("ExchangeRate", client =>
+        {
+            client.BaseAddress = new Uri("https://api.frankfurter.app");
+        });
+        services.AddScoped<IExchangeRateService, ExchangeRateService>();
+
         return services;
     }
 }
