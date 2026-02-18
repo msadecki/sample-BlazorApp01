@@ -6,6 +6,7 @@ using BlazorApp01.Web;
 using BlazorApp01.Web.Components;
 using BlazorApp01.Web.Components.Account;
 using Hangfire;
+using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,12 @@ builder.Services.RegisterFeatures(builder.Configuration);
 builder.Services.RegisterMessaging(builder.Configuration);
 builder.Services.RegisterBackgroundProcessing(builder.Configuration);
 builder.Services.RegisterWeb(builder.Configuration);
+
+// Enable detailed circuit errors in Development to see full exception details in the browser
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.Configure<CircuitOptions>(options => options.DetailedErrors = true);
+}
 
 var app = builder.Build();
 

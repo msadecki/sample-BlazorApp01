@@ -1,7 +1,6 @@
-window.weatherMap = (function () {
-    const maps = new Map();
+const maps = new Map();
 
-    function init(elementId, lat, lon, dotNetRef) {
+function init(elementId, lat, lon, dotNetRef) {
         const el = document.getElementById(elementId);
         if (!el) return;
 
@@ -88,8 +87,7 @@ window.weatherMap = (function () {
         entry.marker.setLatLng([lat, lon]);
     }
 
-    return {
-        init: init,
-        setLocation: setLocation
-    };
-})();
+export { init, setLocation };
+
+// Also expose globally for non-module usage
+window.weatherMap = window.weatherMap || { init: init, setLocation: setLocation };

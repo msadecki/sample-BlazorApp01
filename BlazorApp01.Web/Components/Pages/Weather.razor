@@ -48,8 +48,6 @@ else
     </div>
 
     <div style="margin-top:0.5rem">
-        <script src="/js/weatherMap.js"></script>
-
         <div id="map" style="height:300px;border:1px solid #ccc"></div>
     </div>
 </div>
@@ -65,6 +63,7 @@ else
     private bool needsMapUpdate;
     private bool mapInitPending = true;
     private bool mapInitialized;
+    private IJSObjectReference? mapModule;
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,22 +72,30 @@ else
 
     private async Task LoadForecastsAsync()
     {
-        // Load real data from the weather service using currently selected location
-        var points = await WeatherService.GetForecastsAsync(days: 14, latitude: latitude, longitude: longitude);
-        forecasts = points.Select(point => new WeatherForecast(DateTimeHelper)
+        try
         {
-            DateTimeUtc = point.DateTime,
-            TemperatureMin = point.TemperatureMin,
-            TemperatureMax = point.TemperatureMax,
-            TemperatureC = point.TemperatureC,
-            PrecipitationSum = point.PrecipitationSum,
-            PrecipitationProbabilityMax = point.PrecipitationProbabilityMax,
-            WindSpeedMax = point.WindSpeedMax,
-            WeatherCode = point.WeatherCode,
-            SunriseUtc = point.Sunrise,
-            SunsetUtc = point.Sunset,
-            CreatedAtUtc = point.CreatedAtUtc
-        }).ToArray();
+            // Load real data from the weather service using currently selected location
+            var points = await WeatherService.GetForecastsAsync(days: 14, latitude: latitude, longitude: longitude);
+            forecasts = points.Select(point => new WeatherForecast(DateTimeHelper)
+            {
+                DateTimeUtc = point.DateTime,
+                TemperatureMin = point.TemperatureMin,
+                TemperatureMax = point.TemperatureMax,
+                TemperatureC = point.TemperatureC,
+                PrecipitationSum = point.PrecipitationSum,
+                PrecipitationProbabilityMax = point.PrecipitationProbabilityMax,
+                WindSpeedMax = point.WindSpeedMax,
+                WeatherCode = point.WeatherCode,
+                SunriseUtc = point.Sunrise,
+                SunsetUtc = point.Sunset,
+                CreatedAtUtc = point.CreatedAtUtc
+            }).ToArray();
+        }
+        catch (Exception)
+        {
+            // Swallow exceptions here to avoid terminating the Blazor circuit when called from JS callbacks.
+            forecasts = Array.Empty<WeatherForecast>();
+        }
 
         // Request map update after render (JS interop not allowed during prerender/OnInitialized)
         needsMapUpdate = true;
@@ -106,27 +113,34 @@ else
                 try
                 {
                     dotNetRef ??= DotNetObjectReference.Create(this);
-                    await JSRuntime.InvokeVoidAsync("weatherMap.init", "map", latitude, longitude, dotNetRef);
+                    // Import the ES module. This may fail during prerender; catch and retry.
+                    mapModule ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/js/weatherMap.js");
+                    await mapModule.InvokeVoidAsync("init", "map", latitude, longitude, dotNetRef);
                     mapInitialized = true;
                     mapInitPending = false;
                 }
+                catch (JSException)
+                {
+                    // JS interop not available yet or module not loaded. Keep pending so we'll retry later.
+                    mapInitialized = false;
+                    mapInitPending = true;
+                }
                 catch (InvalidOperationException)
                 {
-                    // JS interop not available yet (prerender). Keep pending so we'll retry later.
                     mapInitialized = false;
                     mapInitPending = true;
                 }
             }
         }
 
-        if (mapInitialized && needsMapUpdate && JSRuntime is not null)
+        if (mapInitialized && needsMapUpdate && mapModule is not null)
         {
             try
             {
                 needsMapUpdate = false;
-                await JSRuntime.InvokeVoidAsync("weatherMap.setLocation", "map", latitude, longitude);
+                await mapModule.InvokeVoidAsync("setLocation", "map", latitude, longitude);
             }
-            catch (InvalidOperationException)
+            catch (JSException)
             {
                 // JS interop not available right now; keep update requested for next render
                 needsMapUpdate = true;
@@ -138,14 +152,38 @@ else
     public async Task NotifyLocationChanged(double lat, double lon)
     {
         // Called from JS when user clicks or drags the marker on the map
-        latitude = lat;
-        longitude = lon;
-        await LoadForecastsAsync();
-        StateHasChanged();
+        try
+        {
+            latitude = lat;
+            longitude = lon;
+            await LoadForecastsAsync();
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // Swallow exceptions coming from JS callbacks to avoid circuit termination.
+        }
     }
 
     public void Dispose()
     {
+        dotNetRef?.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (mapModule is not null)
+            {
+                await mapModule.DisposeAsync();
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+
         dotNetRef?.Dispose();
     }
 
