@@ -72,30 +72,22 @@ else
 
     private async Task LoadForecastsAsync()
     {
-        try
+        // Load real data from the weather service using currently selected location
+        var points = await WeatherService.GetForecastsAsync(days: 14, latitude: latitude, longitude: longitude);
+        forecasts = points.Select(point => new WeatherForecast(DateTimeHelper)
         {
-            // Load real data from the weather service using currently selected location
-            var points = await WeatherService.GetForecastsAsync(days: 14, latitude: latitude, longitude: longitude);
-            forecasts = points.Select(point => new WeatherForecast(DateTimeHelper)
-            {
-                DateTimeUtc = point.DateTime,
-                TemperatureMin = point.TemperatureMin,
-                TemperatureMax = point.TemperatureMax,
-                TemperatureC = point.TemperatureC,
-                PrecipitationSum = point.PrecipitationSum,
-                PrecipitationProbabilityMax = point.PrecipitationProbabilityMax,
-                WindSpeedMax = point.WindSpeedMax,
-                WeatherCode = point.WeatherCode,
-                SunriseUtc = point.Sunrise,
-                SunsetUtc = point.Sunset,
-                CreatedAtUtc = point.CreatedAtUtc
-            }).ToArray();
-        }
-        catch (Exception)
-        {
-            // Swallow exceptions here to avoid terminating the Blazor circuit when called from JS callbacks.
-            forecasts = Array.Empty<WeatherForecast>();
-        }
+            DateTimeUtc = point.DateTime,
+            TemperatureMin = point.TemperatureMin,
+            TemperatureMax = point.TemperatureMax,
+            TemperatureC = point.TemperatureC,
+            PrecipitationSum = point.PrecipitationSum,
+            PrecipitationProbabilityMax = point.PrecipitationProbabilityMax,
+            WindSpeedMax = point.WindSpeedMax,
+            WeatherCode = point.WeatherCode,
+            SunriseUtc = point.Sunrise,
+            SunsetUtc = point.Sunset,
+            CreatedAtUtc = point.CreatedAtUtc
+        }).ToArray();
 
         // Request map update after render (JS interop not allowed during prerender/OnInitialized)
         needsMapUpdate = true;
@@ -152,17 +144,10 @@ else
     public async Task NotifyLocationChanged(double lat, double lon)
     {
         // Called from JS when user clicks or drags the marker on the map
-        try
-        {
-            latitude = lat;
-            longitude = lon;
-            await LoadForecastsAsync();
-            StateHasChanged();
-        }
-        catch (Exception)
-        {
-            // Swallow exceptions coming from JS callbacks to avoid circuit termination.
-        }
+        latitude = lat;
+        longitude = lon;
+        await LoadForecastsAsync();
+        StateHasChanged();
     }
 
     public void Dispose()
