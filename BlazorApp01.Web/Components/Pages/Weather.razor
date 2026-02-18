@@ -31,7 +31,8 @@ else
         <PropertyColumn Property="@(forecast => forecast.PrecipitationSum)" Title="Precip. (mm)" Sortable="true" Format="F1" />
         <PropertyColumn Property="@(forecast => forecast.PrecipitationProbabilityMax)" Title="Precip. Prob (%)" Sortable="true" />
         <PropertyColumn Property="@(forecast => forecast.WindSpeedMax)" Title="Wind Max (m/s)" Sortable="true" Format="F1" />
-        <PropertyColumn Property="@(forecast => forecast.WeatherCode)" Title="Weather Code" Sortable="true" />
+        @* <PropertyColumn Property="@(forecast => forecast.WeatherCode)" Title="Weather Code" Sortable="true" /> *@
+        <PropertyColumn Property="@(forecast => forecast.WeatherDescription)" Title="Weather Description" Sortable="true" />
     </QuickGrid>
 }
 
@@ -84,9 +85,10 @@ else
             PrecipitationProbabilityMax = point.PrecipitationProbabilityMax,
             WindSpeedMax = point.WindSpeedMax,
             WeatherCode = point.WeatherCode,
+            WeatherDescription = point.WeatherDescription,
             SunriseUtc = point.Sunrise,
             SunsetUtc = point.Sunset,
-            CreatedAtUtc = point.CreatedAtUtc
+            CreatedAtUtc = point.CreatedAt
         }).ToArray();
 
         // Request map update after render (JS interop not allowed during prerender/OnInitialized)
@@ -182,6 +184,7 @@ else
             public required int PrecipitationProbabilityMax { get; init; }
             public required decimal WindSpeedMax { get; init; }
             public required int WeatherCode { get; init; }
+            public required string WeatherDescription { get; init; }
             public required DateTime? SunriseUtc { get; init; }
             public required DateTime? SunsetUtc { get; init; }
             public required DateTime CreatedAtUtc { get; init; }
