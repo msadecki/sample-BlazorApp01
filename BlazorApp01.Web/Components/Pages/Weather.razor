@@ -48,9 +48,9 @@ else
     </div>
 
     <div style="margin-top:0.5rem">
-        <iframe title="map" width="100%" height="300" frameborder="0"
-                src="@MapEmbedUrl"
-                style="border:1px solid #ccc"></iframe>
+        <script src="/js/weatherMap.js"></script>
+
+        <div id="map" style="height:300px;border:1px solid #ccc"></div>
     </div>
 </div>
 
@@ -58,8 +58,13 @@ else
     private WeatherForecast[]? forecasts;
     private double latitude = 52.23224240174998;
     private double longitude = 20.93381175935411;
+    [Inject]
+    private IJSRuntime? JSRuntime { get; set; }
 
-    private string MapEmbedUrl => GetMapEmbedUrl(latitude, longitude);
+    private DotNetObjectReference<Weather>? dotNetRef;
+    private bool needsMapUpdate;
+    private bool mapInitPending = true;
+    private bool mapInitialized;
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,19 +90,63 @@ else
             CreatedAtUtc = point.CreatedAtUtc
         }).ToArray();
 
-        // Update map (property reflects updated coords)
+        // Request map update after render (JS interop not allowed during prerender/OnInitialized)
+        needsMapUpdate = true;
         StateHasChanged();
     }
 
-    private static string GetMapEmbedUrl(double lat, double lon)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Build a simple OpenStreetMap embed URL with a small bbox around the marker
-        var latMin = lat - 0.02;
-        var lonMin = lon - 0.02;
-        var latMax = lat + 0.02;
-        var lonMax = lon + 0.02;
-        // Example: https://www.openstreetmap.org/export/embed.html?bbox=left,bottom,right,top&layer=mapnik&marker=lat,lon
-        return $"https://www.openstreetmap.org/export/embed.html?bbox={lonMin.ToString(CultureInfo.InvariantCulture)},{latMin.ToString(CultureInfo.InvariantCulture)},{lonMax.ToString(CultureInfo.InvariantCulture)},{latMax.ToString(CultureInfo.InvariantCulture)}&layer=mapnik&marker={lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
+        // Try to initialize the map when JS interop is available. When prerendering, JS interop calls
+        // will throw InvalidOperationException. We catch that and retry on the next render.
+        if (mapInitPending)
+        {
+            if (JSRuntime is not null)
+            {
+                try
+                {
+                    dotNetRef ??= DotNetObjectReference.Create(this);
+                    await JSRuntime.InvokeVoidAsync("weatherMap.init", "map", latitude, longitude, dotNetRef);
+                    mapInitialized = true;
+                    mapInitPending = false;
+                }
+                catch (InvalidOperationException)
+                {
+                    // JS interop not available yet (prerender). Keep pending so we'll retry later.
+                    mapInitialized = false;
+                    mapInitPending = true;
+                }
+            }
+        }
+
+        if (mapInitialized && needsMapUpdate && JSRuntime is not null)
+        {
+            try
+            {
+                needsMapUpdate = false;
+                await JSRuntime.InvokeVoidAsync("weatherMap.setLocation", "map", latitude, longitude);
+            }
+            catch (InvalidOperationException)
+            {
+                // JS interop not available right now; keep update requested for next render
+                needsMapUpdate = true;
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task NotifyLocationChanged(double lat, double lon)
+    {
+        // Called from JS when user clicks or drags the marker on the map
+        latitude = lat;
+        longitude = lon;
+        await LoadForecastsAsync();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        dotNetRef?.Dispose();
     }
 
         private sealed class WeatherForecast(IDateTimeHelper dateTimeHelper)
