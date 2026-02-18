@@ -32,6 +32,7 @@ else
         <PropertyColumn Property="@(forecast => forecast.PrecipitationProbabilityMax)" Title="Precip. Prob (%)" Sortable="true" />
         <PropertyColumn Property="@(forecast => forecast.WindSpeedMax)" Title="Wind Max (m/s)" Sortable="true" Format="F1" />
         @* <PropertyColumn Property="@(forecast => forecast.WeatherCode)" Title="Weather Code" Sortable="true" /> *@
+        <PropertyColumn Property="@(forecast => forecast.WeatherIcon)" Title="Icon" Sortable="true" />
         <PropertyColumn Property="@(forecast => forecast.WeatherDescription)" Title="Weather Description" Sortable="true" />
     </QuickGrid>
 }
@@ -86,6 +87,7 @@ else
             WindSpeedMax = point.WindSpeedMax,
             WeatherCode = point.WeatherCode,
             WeatherDescription = point.WeatherDescription,
+            WeatherIcon = point.WeatherIcon,
             SunriseUtc = point.Sunrise,
             SunsetUtc = point.Sunset,
             CreatedAtUtc = point.CreatedAt
@@ -185,6 +187,7 @@ else
             public required decimal WindSpeedMax { get; init; }
             public required int WeatherCode { get; init; }
             public required string WeatherDescription { get; init; }
+            public required string WeatherIcon { get; init; }
             public required DateTime? SunriseUtc { get; init; }
             public required DateTime? SunsetUtc { get; init; }
             public required DateTime CreatedAtUtc { get; init; }

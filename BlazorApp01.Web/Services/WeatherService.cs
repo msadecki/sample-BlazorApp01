@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using System.Globalization;
 
 namespace BlazorApp01.Web.Services;
@@ -18,6 +18,7 @@ internal sealed record WeatherPoint(
     decimal WindSpeedMax,
     int WeatherCode,
     string WeatherDescription,
+    string WeatherIcon,
     DateTime? Sunrise,
     DateTime? Sunset,
     DateTime CreatedAt);
@@ -86,6 +87,7 @@ internal sealed class WeatherService(IHttpClientFactory httpClientFactory) : IWe
                 WindSpeedMax: (decimal)windMax,
                 WeatherCode: weatherCode,
                 WeatherDescription: GetDescription(weatherCode),
+                WeatherIcon: GetIcon(weatherCode),
                 Sunrise: sunrise,
                 Sunset: sunset,
                 CreatedAt: utcNow));
@@ -127,6 +129,29 @@ internal sealed class WeatherService(IHttpClientFactory httpClientFactory) : IWe
             96 => "Thunderstorm with slight hail",
             99 => "Thunderstorm with heavy hail",
             _ => "Unknown"
+        };
+    }
+
+    private static string GetIcon(int weatherCode)
+    {
+        // Simple emoji-based icons. These are intentionally lightweight and work without additional assets.
+        return weatherCode switch
+        {
+            0 => "☀️", // Clear sky
+            1 => "🌤️", // Mainly clear
+            2 => "⛅", // Partly cloudy
+            3 => "☁️", // Overcast
+            45 => "🌫️", // Fog
+            48 => "🌫️", // Depositing rime fog
+            51 or 53 or 55 => "🌦️", // Drizzle
+            56 or 57 => "🌧️", // Freezing drizzle
+            61 or 63 or 65 => "🌧️", // Rain
+            66 or 67 => "🌧️", // Freezing rain
+            71 or 73 or 75 or 77 => "❄️", // Snow
+            80 or 81 or 82 => "🌧️", // Rain showers
+            85 or 86 => "❄️", // Snow showers
+            95 or 96 or 99 => "⛈️", // Thunderstorm
+            _ => "❔"
         };
     }
 
