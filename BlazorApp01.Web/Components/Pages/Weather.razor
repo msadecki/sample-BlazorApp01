@@ -2,13 +2,14 @@
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using BlazorApp01.Web.Services
 @inject IDateTimeHelper DateTimeHelper
+@inject IWeatherService WeatherService
 @rendermode InteractiveServer
 
 <PageTitle>Weather</PageTitle>
 
 <h1>Weather</h1>
 
-<p>This component demonstrates showing data with user time zone conversion.</p>
+<p>This component demonstrates showing data with user time zone conversion. It uses free weather forecast API data feed (open-meteo.com).</p>
 
 @if (forecasts == null)
 {
@@ -17,11 +18,19 @@
 else
 {
     <QuickGrid Class="table" Items="@forecasts.AsQueryable()">
-        <PropertyColumn Property="@(f => f.Date)" Format="d" Title="Date" Sortable="true" />
-        <PropertyColumn Property="@(f => f.CreatedAtUserTZ)" Title="Created (User TZ)" Sortable="true" />
-        <PropertyColumn Property="@(f => f.TemperatureC)" Title="Temp. (C)" Sortable="true" />
-        <PropertyColumn Property="@(f => f.TemperatureF)" Title="Temp. (F)" Sortable="true" />
-        <PropertyColumn Property="@(f => f.Summary)" Title="Summary" Sortable="true" />
+        <PropertyColumn Property="@(forecast => forecast.DateAtUserTZ)" Title="Date (User TZ)" Sortable="true" />
+        @* <PropertyColumn Property="@(forecast => forecast.DateTimeAtUserTZ)" Title="Date Time (User TZ)" Sortable="true" /> *@
+        <PropertyColumn Property="@(forecast => forecast.SunriseAtUserTZ)" Title="Sunrise (User TZ)" Sortable="true" />
+        <PropertyColumn Property="@(forecast => forecast.SunsetAtUserTZ)" Title="Sunset (User TZ)" Sortable="true" />
+        @* <PropertyColumn Property="@(forecast => forecast.CreatedAtUserTZ)" Title="Created (User TZ)" Sortable="true" /> *@
+        <PropertyColumn Property="@(forecast => forecast.TemperatureMin)" Title="Temp. Min (C)" Sortable="true" Format="F1" />
+        <PropertyColumn Property="@(forecast => forecast.TemperatureMax)" Title="Temp. Max (C)" Sortable="true" Format="F1" />
+        @* <PropertyColumn Property="@(forecast => forecast.TemperatureC)" Title="Temp. (C)" Sortable="true" /> *@
+        @* <PropertyColumn Property="@(forecast => forecast.TemperatureF)" Title="Temp. (F)" Sortable="true" /> *@
+        <PropertyColumn Property="@(forecast => forecast.PrecipitationSum)" Title="Precip. (mm)" Sortable="true" Format="F1" />
+        <PropertyColumn Property="@(forecast => forecast.PrecipitationProbabilityMax)" Title="Precip. Prob (%)" Sortable="true" />
+        <PropertyColumn Property="@(forecast => forecast.WindSpeedMax)" Title="Wind Max (m/s)" Sortable="true" Format="F1" />
+        <PropertyColumn Property="@(forecast => forecast.WeatherCode)" Title="Weather Code" Sortable="true" />
     </QuickGrid>
 }
 
@@ -30,29 +39,43 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Simulate asynchronous loading to demonstrate streaming rendering
-        await Task.Delay(500);
-
-        var utcNow = DateTime.UtcNow;
-        var startDate = DateOnly.FromDateTime(utcNow);
-        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
-        forecasts = Enumerable.Range(0, 12).Select(index => new WeatherForecast(DateTimeHelper)
+        // Load real data from the weather service
+        var points = await WeatherService.GetForecastsAsync(days: 14);
+        forecasts = points.Select(point => new WeatherForecast(DateTimeHelper)
         {
-            Date = startDate.AddDays(index),
-            TemperatureC = Random.Shared.Next(-20, 40),
-            Summary = summaries[Random.Shared.Next(summaries.Length)],
-            CreatedAtUtc = utcNow
+            DateTimeUtc = point.DateTime,
+            TemperatureMin = point.TemperatureMin,
+            TemperatureMax = point.TemperatureMax,
+            TemperatureC = point.TemperatureC,
+            PrecipitationSum = point.PrecipitationSum,
+            PrecipitationProbabilityMax = point.PrecipitationProbabilityMax,
+            WindSpeedMax = point.WindSpeedMax,
+            WeatherCode = point.WeatherCode,
+            SunriseUtc = point.Sunrise,
+            SunsetUtc = point.Sunset,
+            CreatedAtUtc = point.CreatedAtUtc
         }).ToArray();
     }
 
-    private sealed class WeatherForecast(IDateTimeHelper dateTimeHelper)
-    {
-        public required DateOnly Date { get; init; }
-        public required int TemperatureC { get; init; }
-        public required string? Summary { get; init; }
-        public required DateTime CreatedAtUtc { get; init; }
+        private sealed class WeatherForecast(IDateTimeHelper dateTimeHelper)
+        {
+            public required DateTime DateTimeUtc { get; init; }
+            public required decimal TemperatureMin { get; init; }
+            public required decimal TemperatureMax { get; init; }
+            public required int TemperatureC { get; init; }
+            public required decimal PrecipitationSum { get; init; }
+            public required int PrecipitationProbabilityMax { get; init; }
+            public required decimal WindSpeedMax { get; init; }
+            public required int WeatherCode { get; init; }
+            public required DateTime? SunriseUtc { get; init; }
+            public required DateTime? SunsetUtc { get; init; }
+            public required DateTime CreatedAtUtc { get; init; }
 
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-        public string CreatedAtUserTZ => dateTimeHelper.ConvertToFormattedUserDateTime(CreatedAtUtc);
-    }
+            public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+            public string DateTimeAtUserTZ => dateTimeHelper.ConvertToFormattedUserDateTime(DateTimeUtc);
+            public string DateAtUserTZ => dateTimeHelper.ConvertToFormattedUserDate(DateTimeUtc);
+            public string SunriseAtUserTZ => dateTimeHelper.ConvertToFormattedUserDateTime(SunriseUtc);
+            public string SunsetAtUserTZ => dateTimeHelper.ConvertToFormattedUserDateTime(SunsetUtc);
+            public string CreatedAtUserTZ => dateTimeHelper.ConvertToFormattedUserDateTime(CreatedAtUtc);
+        }
 }

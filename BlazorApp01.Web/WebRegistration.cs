@@ -46,6 +46,13 @@ public static class WebRegistration
 
         services.AddCascadingAuthenticationState();
 
+        // Register weather service and HttpClient for Open-Meteo
+        services.AddHttpClient("OpenMeteo", client =>
+        {
+            client.BaseAddress = new Uri("https://api.open-meteo.com");
+        });
+        services.AddScoped<IWeatherService, WeatherService>();
+
         return services;
     }
 }
