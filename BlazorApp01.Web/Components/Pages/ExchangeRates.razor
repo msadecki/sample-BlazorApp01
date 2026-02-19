@@ -24,7 +24,7 @@
 {
     <p><em>Loading...</em></p>
 }
-else if (rates == null || rates.Length == 0)
+else if (rates == null || rates.Count == 0)
 {
     <p>No data</p>
 }
@@ -35,8 +35,8 @@ else
     </div>
 
     <QuickGrid Class="table mt-3" ItemsProvider="ratesProvider" Pagination="pagination">
-        <PropertyColumn Property="r => r.DateTimeUtc" Title="Date (UTC)" Sortable="true" />
-        <PropertyColumn Property="r => r.Rate" Title="Rate (EUR→USD)" Sortable="true" Format="F6" />
+        <PropertyColumn Property="point => point.Date" Title="Date" Sortable="true" />
+        <PropertyColumn Property="point => point.Rate" Title="Rate" Sortable="true" Format="F6" />
     </QuickGrid>
     <Paginator State="pagination" />
 }
@@ -46,7 +46,7 @@ else
     private DateTime endDate = DateTime.UtcNow;
 
     private bool loading;
-    private ExchangeRatePoint[]? rates;
+    private IReadOnlyList<ExchangeRatePoint>? rates;
     private bool shouldRenderChart;
     private string? errorMessage;
 
@@ -63,9 +63,9 @@ else
             if (request.GetSortByProperties().Any())
             {
                 var p = request.GetSortByProperties().First();
-                if (p.PropertyName == nameof(ExchangeRatePoint.DateTimeUtc))
+                if (p.PropertyName == nameof(ExchangeRatePoint.Date))
                 {
-                    q = p.Direction == SortDirection.Ascending ? q.OrderBy(x => x.DateTimeUtc) : q.OrderByDescending(x => x.DateTimeUtc);
+                    q = p.Direction == SortDirection.Ascending ? q.OrderBy(x => x.Date) : q.OrderByDescending(x => x.Date);
                 }
                 else if (p.PropertyName == nameof(ExchangeRatePoint.Rate))
                 {
@@ -74,7 +74,7 @@ else
             }
 
             var result = q.Skip(request.StartIndex).Take(request.Count ?? pagination.ItemsPerPage).ToList();
-            return GridItemsProviderResult.From(result, items.Length);
+            return GridItemsProviderResult.From(result, items.Count);
         };
     }
 
@@ -86,8 +86,7 @@ else
 
         try
         {
-            var pts = await ExchangeRateService.GetRatesAsync(startDate, endDate);
-            rates = pts.Select(p => new ExchangeRatePoint(p.DateTimeUtc, p.Rate, p.CreatedAt)).ToArray();
+            rates = await ExchangeRateService.GetRatesAsync(startDate, endDate);
             // Defer chart rendering until after the component has rendered the canvas element
             shouldRenderChart = true;
             StateHasChanged();
@@ -108,10 +107,10 @@ else
         {
             shouldRenderChart = false;
             // Ensure rates is not null
-            if (rates != null && rates.Length > 0)
+            if (rates != null && rates.Count > 0)
             {
                 // Serialize to JSON string to ensure a predictable shape arrives in JS
-                var payload = System.Text.Json.JsonSerializer.Serialize(rates.Select(r => new { date = r.DateTimeUtc.ToString("o"), rate = r.Rate }).ToArray());
+                var payload = System.Text.Json.JsonSerializer.Serialize(rates.Select(r => new { date = r.Date.ToString("o"), rate = r.Rate }).ToArray());
                 // Log payload server-side to help debugging (visible in application output)
                 //Console.WriteLine($"ExchangeRates: sending payload with {rates.Length} points: {payload}");
 
@@ -141,6 +140,4 @@ else
             await chartModule.DisposeAsync();
         }
     }
-
-    private sealed record ExchangeRatePoint(DateTime DateTimeUtc, decimal Rate, DateTime CreatedAt);
 }

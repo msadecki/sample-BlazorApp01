@@ -39,9 +39,9 @@ window.exchangeChartInterop = (function () {
                     borderColor: 'rgba(75, 192, 192, 1)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     tension: 0.0,
-                    pointRadius: 4,
+                    pointRadius: 0,
                     pointBackgroundColor: 'rgba(255,255,255,1)',
-                    pointHoverRadius: 6,
+                    pointHoverRadius: 5,
                     borderWidth: 2,
                     fill: false
                 }]

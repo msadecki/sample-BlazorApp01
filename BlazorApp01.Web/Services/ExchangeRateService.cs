@@ -6,27 +6,21 @@ namespace BlazorApp01.Web.Services;
 
 internal interface IExchangeRateService
 {
-    Task<IReadOnlyList<ExchangeRatePoint>> GetRatesAsync(DateTime start, DateTime end, string baseCurrency = "EUR", string symbols = "USD");
+    Task<IReadOnlyList<ExchangeRatePoint>> GetRatesAsync(DateTime start, DateTime end, string fromCurrency = "EUR", string toCurrency = "USD");
 }
 
-internal sealed record ExchangeRatePoint(DateTime DateTimeUtc, decimal Rate, DateTime CreatedAt);
+internal sealed record ExchangeRatePoint(DateOnly Date, decimal Rate);
 
-internal sealed class ExchangeRateService : IExchangeRateService
+internal sealed class ExchangeRateService(IHttpClientFactory httpClientFactory) : IExchangeRateService
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public ExchangeRateService(IHttpClientFactory httpClientFactory)
+    public async Task<IReadOnlyList<ExchangeRatePoint>> GetRatesAsync(DateTime start, DateTime end, string fromCurrency = "EUR", string toCurrency = "USD")
     {
-        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
-    }
-    public async Task<IReadOnlyList<ExchangeRatePoint>> GetRatesAsync(DateTime start, DateTime end, string baseCurrency = "EUR", string symbols = "USD")
-    {
-        using var httpClient = _httpClientFactory.CreateClient("ExchangeRate");
+        using var httpClient = httpClientFactory.CreateClient("ExchangeRate");
 
         // Frankfurter API uses a date range path like /{start}..{end} and query params `from` and `to`.
         var startStr = start.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var endStr = end.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        var url = $"/{startStr}..{endStr}?from={baseCurrency}&to={symbols}";
+        var url = $"/{startStr}..{endStr}?from={fromCurrency}&to={toCurrency}";
 
         var httpResponse = await httpClient.GetAsync(url);
         var content = await httpResponse.Content.ReadAsStringAsync();
@@ -43,15 +37,14 @@ internal sealed class ExchangeRateService : IExchangeRateService
             throw new InvalidOperationException($"Unable to parse Frankfurter API response: {content}");
         }
 
-        var createdAt = DateTime.UtcNow;
         var points = new List<ExchangeRatePoint>();
 
-        foreach (var kvp in response.Rates.OrderBy(k => k.Key))
+        foreach (var kvp in response.Rates.OrderBy(kvp => kvp.Key))
         {
-            if (DateTime.TryParse(kvp.Key, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dt))
+            if (DateOnly.TryParse(kvp.Key, CultureInfo.InvariantCulture, out var date))
             {
-                var rate = kvp.Value.TryGetValue(symbols, out var r) ? (decimal)r : 0m;
-                points.Add(new ExchangeRatePoint(dt, rate, createdAt));
+                var rate = kvp.Value.TryGetValue(toCurrency, out var r) ? (decimal)r : 0m;
+                points.Add(new ExchangeRatePoint(date, rate));
             }
         }
 
