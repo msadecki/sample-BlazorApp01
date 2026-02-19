@@ -7,12 +7,59 @@
 
 <PageTitle>Exchange Rates</PageTitle>
 
-<h1>EUR → USD Exchange Rates</h1>
+<h1>@fromCurrency → @toCurrency Exchange Rates</h1>
 
 <div class="mb-3">
-    <label>Start Date: <input type="date" @bind="startDate" class="form-control" /></label>
-    <label>End Date: <input type="date" @bind="endDate" class="form-control" /></label>
-    <button class="btn btn-primary mt-2" @onclick="LoadRatesAsync">Load</button>
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">From</label>
+            <select class="form-select" @bind="fromCurrency">
+                @if (currencies != null)
+                {
+                    @foreach (var c in currencies)
+                    {
+                        <option value="@c.Code" disabled="@(c.Code == toCurrency)" selected="@(c.Code == fromCurrency)">@c.Code - @c.Name</option>
+                    }
+                }
+                else
+                {
+                    <option value="EUR">EUR</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">To</label>
+            <select class="form-select" @bind="toCurrency">
+                @if (currencies != null)
+                {
+                    @foreach (var c in currencies)
+                    {
+                        <option value="@c.Code" disabled="@(c.Code == fromCurrency)" selected="@(c.Code == toCurrency)">@c.Code - @c.Name</option>
+                    }
+                }
+                else
+                {
+                    <option value="USD">USD</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Start Date</label>
+            <input type="date" @bind="startDate" class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">End Date</label>
+            <input type="date" @bind="endDate" class="form-control" />
+        </div>
+    </div>
+
+    <div class="mt-2">
+        <button class="btn btn-outline-secondary me-2" @onclick="() => { var tmp = fromCurrency; fromCurrency = toCurrency; toCurrency = tmp; rates = null; StateHasChanged(); }">Swap</button>
+        <button class="btn btn-primary" @onclick="LoadRatesAsync">Load</button>
+    </div>
 </div>
 
 @if (!string.IsNullOrEmpty(errorMessage))
@@ -47,14 +94,19 @@ else
 
     private bool loading;
     private IReadOnlyList<ExchangeRatePoint>? rates;
+    private IReadOnlyList<CurrencyInfo>? currencies;
     private bool shouldRenderChart;
     private string? errorMessage;
 
     private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
     private GridItemsProvider<ExchangeRatePoint>? ratesProvider;
+    private string fromCurrency = "EUR";
+    private string toCurrency = "USD";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await LoadCurrenciesAsync();
+
         ratesProvider = async request =>
         {
             // apply sorting
@@ -86,7 +138,7 @@ else
 
         try
         {
-            rates = await ExchangeRateService.GetRatesAsync(startDate, endDate);
+            rates = await ExchangeRateService.GetRatesAsync(startDate, endDate, fromCurrency, toCurrency);
             // Defer chart rendering until after the component has rendered the canvas element
             shouldRenderChart = true;
             StateHasChanged();
@@ -101,6 +153,41 @@ else
         }
     }
 
+    private async Task LoadCurrenciesAsync()
+    {
+        try
+        {
+            currencies = await ExchangeRateService.GetCurrenciesAsync();
+
+            // Prefer explicit EUR -> USD defaults when available in the returned list.
+            if (currencies.Any(c => c.Code == "EUR"))
+            {
+                fromCurrency = "EUR";
+            }
+            else
+            {
+                fromCurrency = currencies.FirstOrDefault()?.Code ?? "EUR";
+            }
+
+            if (currencies.Any(c => c.Code == "USD"))
+            {
+                toCurrency = "USD";
+            }
+            else
+            {
+                // pick a different currency than `fromCurrency` if possible
+                toCurrency = currencies.FirstOrDefault(c => c.Code != fromCurrency)?.Code ?? fromCurrency;
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // non-fatal: keep defaults
+            errorMessage = "Unable to load currencies: " + ex.Message;
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (shouldRenderChart)
@@ -110,7 +197,17 @@ else
             if (rates != null && rates.Count > 0)
             {
                 // Serialize to JSON string to ensure a predictable shape arrives in JS
-                var payload = System.Text.Json.JsonSerializer.Serialize(rates.Select(r => new { date = r.Date.ToString("o"), rate = r.Rate }).ToArray());
+                var fromName = currencies?.FirstOrDefault(c => c.Code == fromCurrency)?.Name ?? fromCurrency;
+                var toName = currencies?.FirstOrDefault(c => c.Code == toCurrency)?.Name ?? toCurrency;
+
+                var payloadObj = new
+                {
+                    from = new { code = fromCurrency, name = fromName },
+                    to = new { code = toCurrency, name = toName },
+                    points = rates.Select(r => new { date = r.Date.ToString("o"), rate = r.Rate }).ToArray()
+                };
+
+                var payload = System.Text.Json.JsonSerializer.Serialize(payloadObj);
                 // Log payload server-side to help debugging (visible in application output)
                 //Console.WriteLine($"ExchangeRates: sending payload with {rates.Length} points: {payload}");
 

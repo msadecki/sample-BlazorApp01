@@ -23,7 +23,7 @@ window.exchangeChartInterop = (function () {
         return [];
     }
 
-    function createChart(ctx, points) {
+    function createChart(ctx, points, title) {
         const values = points.map(p => p.y);
         const minVal = Math.min(...values);
         const maxVal = Math.max(...values);
@@ -33,7 +33,7 @@ window.exchangeChartInterop = (function () {
             type: 'line',
             data: {
                 datasets: [{
-                    label: 'EUR → USD',
+                    label: title ?? 'Exchange Rate',
                     data: points,
                     parsing: { xAxisKey: 'x', yAxisKey: 'y' },
                     borderColor: 'rgba(75, 192, 192, 1)',
@@ -64,7 +64,32 @@ window.exchangeChartInterop = (function () {
     function render(points) {
         try {
             console.log('exchangeChartInterop.render invoked with:', points);
-            const arr = toArray(points);
+            let parsed = points;
+            if (typeof parsed === 'string') {
+                try { parsed = JSON.parse(parsed); } catch (e) { parsed = points; }
+            }
+
+            // Determine payload shape. Support legacy array-of-points, or object { from, to, points }
+            let arr = [];
+            let title = null;
+
+            if (Array.isArray(parsed)) {
+                arr = parsed;
+            }
+            else if (parsed && typeof parsed === 'object') {
+                if (Array.isArray(parsed.points)) {
+                    arr = parsed.points;
+                    const fromCode = parsed.from?.code ?? parsed.from?.name ?? null;
+                    const toCode = parsed.to?.code ?? parsed.to?.name ?? null;
+                    if (fromCode && toCode) title = `${fromCode} → ${toCode}`;
+                    else if (parsed.from?.name && parsed.to?.name) title = `${parsed.from.name} → ${parsed.to.name}`;
+                }
+                else {
+                    // fallback: use object values
+                    arr = Object.values(parsed);
+                }
+            }
+
             console.log('exchangeChartInterop parsed array:', arr);
 
             const canvas = document.getElementById('exchangeChart');
@@ -79,11 +104,15 @@ window.exchangeChartInterop = (function () {
                 return;
             }
 
-            const normalized = arr.map(p => {
+            const normalized = arr.flatMap(item => {
+                // item might itself be an array of points (e.g. when parsed object contained points array)
+                if (Array.isArray(item)) return item;
+                return [item];
+            }).map(p => {
                 const dateVal = p?.date ?? p?.x ?? p?.time;
-                const parsed = new Date(dateVal);
+                const parsedDate = new Date(dateVal);
                 // use ISO date (yyyy-mm-dd) to avoid locale issues
-                const label = (parsed && !isNaN(parsed.getTime())) ? parsed.toISOString().slice(0, 10) : (dateVal ?? '');
+                const label = (parsedDate && !isNaN(parsedDate.getTime())) ? parsedDate.toISOString().slice(0, 10) : (dateVal ?? '');
                 const rate = Number(p?.rate ?? p?.y ?? p?.value);
                 return { label, rate };
             }).filter(pt => typeof pt.label === 'string' && pt.label.length > 0 && Number.isFinite(pt.rate));
@@ -111,7 +140,7 @@ window.exchangeChartInterop = (function () {
             }
 
             // create chart (always recreate to avoid references to replaced canvas)
-            createChart(ctx, chartPoints);
+            createChart(ctx, chartPoints, title ?? undefined);
             console.log('exchangeChartInterop: chart created');
         }
         catch (e) {

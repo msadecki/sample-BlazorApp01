@@ -7,7 +7,11 @@ namespace BlazorApp01.Web.Services;
 internal interface IExchangeRateService
 {
     Task<IReadOnlyList<ExchangeRatePoint>> GetRatesAsync(DateTime start, DateTime end, string fromCurrency = "EUR", string toCurrency = "USD");
+
+    Task<IReadOnlyList<CurrencyInfo>> GetCurrenciesAsync();
 }
+
+internal sealed record CurrencyInfo(string Code, string Name);
 
 internal sealed record ExchangeRatePoint(DateOnly Date, decimal Rate);
 
@@ -49,6 +53,32 @@ internal sealed class ExchangeRateService(IHttpClientFactory httpClientFactory) 
         }
 
         return points;
+    }
+
+    public async Task<IReadOnlyList<CurrencyInfo>> GetCurrenciesAsync()
+    {
+        using var httpClient = httpClientFactory.CreateClient("ExchangeRate");
+
+        var httpResponse = await httpClient.GetAsync("/currencies");
+        var content = await httpResponse.Content.ReadAsStringAsync();
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"Frankfurter API returned status {httpResponse.StatusCode}: {content}");
+        }
+
+        var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var map = JsonSerializer.Deserialize<Dictionary<string, string>>(content, jsonOptions);
+        if (map == null)
+        {
+            throw new InvalidOperationException($"Unable to parse currencies response: {content}");
+        }
+
+        var list = map.OrderBy(kvp => kvp.Key)
+                      .Select(kvp => new CurrencyInfo(kvp.Key, kvp.Value))
+                      .ToList();
+
+        return list;
     }
 
     private sealed class FrankfurterTimeseriesResponse
